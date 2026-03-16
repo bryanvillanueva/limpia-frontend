@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(node:*)",
+      "Bash(head:*)",
+      "Bash(cd /c/wamp64/www/limpia-front/frontend && npm run build 2>&1)",
+      "Bash(npx eslint:*)",
+      "Bash(npx vite:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}
