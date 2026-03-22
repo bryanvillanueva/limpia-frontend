@@ -47,7 +47,7 @@ const NULLABLE_FIELDS = ['direccion', 'telefono', 'fecha_vencimiento_visa', 'tip
  */
 function SectionHeader({ title, optional }) {
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
       <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
         {title}
       </Typography>

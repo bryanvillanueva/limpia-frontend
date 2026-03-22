@@ -7,11 +7,12 @@ import {
 } from '@mui/material';
 import {
   Add, ChevronLeft, ChevronRight, CalendarMonth, EventNote,
-  ViewWeek, ViewDay, PeopleAlt,
+  ViewWeek, ViewDay, PeopleAlt, Assessment,
 } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
 import LogFormModal from './LogFormModal';
+import GenerateLogReportModal from './GenerateLogReportModal';
 import { getMyLogs, importFromTeammate } from '../../services/logs.service';
 import { getMyTeam, getWeekPlan, getTeamSites } from '../../services/planner.service';
 
@@ -139,6 +140,9 @@ export default function MisSitiosPage() {
   const [modalPlannerEntry, setModalPlannerEntry] = useState(null);
   const [modalExistingLog, setModalExistingLog] = useState(null);
   const [modalKey, setModalKey] = useState(0);
+
+  // Generate report modal
+  const [reportModalOpen, setReportModalOpen] = useState(false);
 
   // Import from teammate state
   const [importPreview, setImportPreview] = useState(null); // dry_run result
@@ -438,9 +442,14 @@ export default function MisSitiosPage() {
         title="Registrar Logs"
         subtitle={team ? `Equipo ${team.team_numero ?? team.team_id}` : 'Cargando equipo...'}
         action={
-          <Button variant="contained" startIcon={<Add />} onClick={openCustomModal}>
-            Agregar log
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button variant="outlined" startIcon={<Assessment />} onClick={() => setReportModalOpen(true)}>
+              Generar reporte
+            </Button>
+            <Button variant="contained" startIcon={<Add />} onClick={openCustomModal}>
+              Agregar log
+            </Button>
+          </Box>
         }
       />
 
@@ -984,6 +993,13 @@ export default function MisSitiosPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Generate report modal */}
+      <GenerateLogReportModal
+        open={reportModalOpen}
+        onClose={() => setReportModalOpen(false)}
+        currentWeekStart={weekStart}
+      />
 
       {/* Log form modal */}
       <LogFormModal
