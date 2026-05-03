@@ -6,7 +6,7 @@ import {
 import {
   People, Groups, Business, LocationOn, Inventory,
   ShoppingCart, Build, DirectionsCar, BeachAccess,
-  BarChart, Warning, Dashboard, Home, CalendarMonth, AccessTime, Assignment,
+  BarChart, Warning, Dashboard, Home, CalendarMonth, Assignment,
   ExpandLess, ExpandMore, EditNote,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -35,7 +35,6 @@ const NAV_ITEMS = [
     label: 'Mis Reportes', icon: <Assignment />, roles: ['cleaner'],
     children: [
       { label: 'Registrar Logs', path: '/registrar-logs', icon: <EditNote /> },
-      { label: 'Time Report',    path: '/time-report',    icon: <AccessTime /> },
       { label: 'Mis Reportes',   path: '/mis-reportes',   icon: <Assignment /> },
     ],
   },

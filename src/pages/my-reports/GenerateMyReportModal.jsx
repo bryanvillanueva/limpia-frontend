@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Box, Typography, Checkbox, Alert, Button, DialogActions,
+  Box, Typography, Alert, Button, DialogActions,
   Divider, Paper, ToggleButton, ToggleButtonGroup, Chip,
 } from '@mui/material';
 import FormModal from '../../components/ui/FormModal';
@@ -10,7 +10,6 @@ const ENTRY_TYPE_LABELS = { SERVICE: 'Service', BINS: 'Bins', CUSTOM: 'Personali
 
 export default function GenerateMyReportModal({ open, onClose, cycle, onGenerated }) {
   const [logs, setLogs] = useState([]);
-  const [excluded, setExcluded] = useState(new Set());
   const [estado, setEstado] = useState('enviado');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -21,37 +20,26 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
   useEffect(() => {
     if (!open || !billingPeriodId) return;
     setLoading(true);
-    setExcluded(new Set());
     setEstado('enviado');
     setError('');
     getPeriodLogs({ billing_period_id: billingPeriodId })
       .then(setLogs)
-      .catch(() => setError('Error al cargar los logs del período'))
+      .catch(() => setError('Error al cargar los logs del periodo'))
       .finally(() => setLoading(false));
   }, [open, billingPeriodId]);
 
-  const toggleExclude = (id) => {
-    setExcluded(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
-
-  const includedLogs = useMemo(() => logs.filter(l => !excluded.has(l.id)), [logs, excluded]);
   const total = useMemo(
-    () => includedLogs.reduce((sum, l) => sum + Number(l.display_value || 0), 0),
-    [includedLogs],
+    () => logs.reduce((sum, l) => sum + Number(l.display_value || 0), 0),
+    [logs],
   );
 
   const handleSubmit = async () => {
-    if (!billingPeriodId) { setError('No hay período activo'); return; }
+    if (!billingPeriodId) { setError('No hay periodo activo'); return; }
     setSaving(true);
     setError('');
     try {
       const result = await generateReport({
         billing_period_id: billingPeriodId,
-        excluded_log_ids: [...excluded],
         estado,
       });
       onGenerated(result);
@@ -63,13 +51,13 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
   };
 
   return (
-    <FormModal open={open} onClose={onClose} title="Generar reporte del período" maxWidth="md">
+    <FormModal open={open} onClose={onClose} title="Generar reporte del periodo" maxWidth="md">
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {error && <Alert severity="error">{error}</Alert>}
 
         {cycle?.billing_period && (
           <Typography variant="body2" color="text.secondary">
-            Período:{' '}
+            Periodo:{' '}
             <strong>
               {new Date(cycle.billing_period.start_date).toLocaleDateString()} —{' '}
               {new Date(cycle.billing_period.end_date).toLocaleDateString()}
@@ -96,17 +84,14 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
 
         <Box>
           <Typography variant="subtitle2" fontWeight={700} sx={{ mb: 0.5 }}>
-            Logs del período ({logs.length})
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5, display: 'block' }}>
-            Marca los que deseas excluir del reporte
+            Logs del periodo ({logs.length})
           </Typography>
 
           {loading ? (
-            <Typography variant="body2" color="text.secondary">Cargando logs…</Typography>
+            <Typography variant="body2" color="text.secondary">Cargando logs...</Typography>
           ) : logs.length === 0 ? (
             <Paper variant="outlined" sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">No hay logs en este período</Typography>
+              <Typography variant="body2" color="text.secondary">No hay logs en este periodo</Typography>
             </Paper>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, maxHeight: 320, overflowY: 'auto' }}>
@@ -114,18 +99,8 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
                 <Paper
                   key={log.id}
                   variant="outlined"
-                  sx={{
-                    px: 2, py: 1,
-                    opacity: excluded.has(log.id) ? 0.5 : 1,
-                    display: 'flex', alignItems: 'center', gap: 1.5,
-                  }}
+                  sx={{ px: 2, py: 1, display: 'flex', alignItems: 'center', gap: 1.5 }}
                 >
-                  <Checkbox
-                    size="small"
-                    checked={excluded.has(log.id)}
-                    onChange={() => toggleExclude(log.id)}
-                    color="error"
-                  />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body2" fontWeight={600} noWrap>
                       {log.site_name || log.site_id}
@@ -141,7 +116,7 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
                       />
                       {log.observaciones && (
                         <Typography variant="caption" color="text.secondary">
-                          • {log.observaciones}
+                          - {log.observaciones}
                         </Typography>
                       )}
                     </Box>
@@ -158,17 +133,12 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
         <Paper elevation={0} sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              Total incluido ({includedLogs.length} de {logs.length} logs)
+              Total ({logs.length} logs)
             </Typography>
             <Typography variant="h6" fontWeight={700} color="primary.main">
               ${total.toFixed(2)}
             </Typography>
           </Box>
-          {excluded.size > 0 && (
-            <Typography variant="caption" color="text.secondary">
-              {excluded.size} log{excluded.size > 1 ? 's' : ''} excluido{excluded.size > 1 ? 's' : ''}
-            </Typography>
-          )}
         </Paper>
 
         <DialogActions sx={{ px: 0, pb: 0 }}>
@@ -178,7 +148,7 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
             onClick={handleSubmit}
             disabled={saving || loading || !billingPeriodId}
           >
-            {saving ? 'Generando…' : 'Generar reporte'}
+            {saving ? 'Generando...' : 'Generar reporte'}
           </Button>
         </DialogActions>
       </Box>

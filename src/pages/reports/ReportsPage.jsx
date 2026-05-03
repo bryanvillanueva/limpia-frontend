@@ -6,9 +6,12 @@ import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import GenerateReportModal from './GenerateReportModal';
 import { getReports } from '../../services/reports.service';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ReportsPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAccountant = user?.rol === 'accountant';
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -23,14 +26,36 @@ export default function ReportsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const buildTitle = (row) => {
+    const nombre = [row.generado_por, row.generado_por_apellido].filter(Boolean).join(' ');
+    const team = row.team_numero;
+    const start = row.fecha_inicio ? new Date(row.fecha_inicio) : null;
+    const end = row.fecha_fin ? new Date(row.fecha_fin) : null;
+    const pad = (n) => String(n).padStart(2, '0');
+    const fechaRange = start && end
+      ? `semana del ${pad(start.getDate())} ${pad(start.getMonth() + 1)} al ${pad(end.getDate())} ${pad(end.getMonth() + 1)} del ${end.getFullYear()}`
+      : '';
+    const parts = ['Time Sheet'];
+    if (team) parts.push(`Equipo ${team}`);
+    if (nombre) parts.push(`(${nombre})`);
+    if (fechaRange) parts.push(fechaRange);
+    return parts.join(' - ');
+  };
+
   const columns = [
-    { field: 'id', label: '#', render: row => `#${row.id}` },
-    { field: 'fecha_inicio', label: 'Inicio', render: row => new Date(row.fecha_inicio).toLocaleDateString() },
-    { field: 'fecha_fin', label: 'Fin', render: row => new Date(row.fecha_fin).toLocaleDateString() },
+    {
+      field: 'id', label: 'Reporte',
+      render: row => buildTitle(row),
+    },
     { field: 'created_at', label: 'Generado', render: row => new Date(row.created_at).toLocaleDateString() },
     {
-      field: 'aprobado', label: 'Estado',
-      render: row => <Chip label={row.aprobado ? 'Aprobado' : 'Pendiente'} color={row.aprobado ? 'success' : 'warning'} size="small" />,
+      field: 'estado', label: 'Estado',
+      render: row => {
+        const colors = { Borrador: 'default', Enviado: 'warning', Pagado: 'success', Devuelto: 'error', Eliminado: 'default' };
+        const estado = row.estado || 'Enviado';
+        const displayLabel = estado === 'Enviado' && isAccountant ? 'Pendiente' : estado;
+        return <Chip label={displayLabel} color={colors[estado] || 'default'} size="small" />;
+      },
     },
     {
       field: 'actions', label: 'Acciones', align: 'right',

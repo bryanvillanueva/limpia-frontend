@@ -27,7 +27,6 @@ import ReportsPage from '../pages/reports/ReportsPage';
 import ReportDetailPage from '../pages/reports/ReportDetailPage';
 import ComplaintsPage from '../pages/complaints/ComplaintsPage';
 import PlannerPage from '../pages/planner/PlannerPage';
-import TimeReportPage from '../pages/time-report/TimeReportPage';
 
 const ADMIN_MANAGER   = ['admin', 'manager'];
 const ADMIN_ONLY      = ['admin'];
@@ -97,7 +96,6 @@ export default function AppRouter() {
               <Route path="/mis-pedidos"     element={<MyOrdersPage />} />
               <Route path="/mis-pedidos/nuevo" element={<OrderCatalogPage />} />
               <Route path="/mis-vacaciones"  element={<VacationsPage mode="cleaner" />} />
-              <Route path="/time-report"     element={<TimeReportPage />} />
             </Route>
 
             {/* Mis Reportes — all authenticated (cleaner generates, accountant/admin can view via this path too) */}

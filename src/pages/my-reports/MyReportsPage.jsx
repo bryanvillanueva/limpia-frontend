@@ -7,11 +7,7 @@ import DataTable from '../../components/ui/DataTable';
 import GenerateMyReportModal from './GenerateMyReportModal';
 import { getMyReports, getCycle } from '../../services/reports.service';
 
-const ESTADO_CHIP = {
-  borrador: { label: 'Borrador', color: 'default' },
-  enviado:  { label: 'Enviado',  color: 'warning' },
-  aprobado: { label: 'Aprobado', color: 'success' },
-};
+const ESTADO_COLORS = { Borrador: 'default', Enviado: 'warning', Pagado: 'success', Devuelto: 'error', Eliminado: 'default' };
 
 export default function MyReportsPage() {
   const navigate = useNavigate();
@@ -37,15 +33,32 @@ export default function MyReportsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  const buildTitle = (row) => {
+    const nombre = [row.generado_por, row.generado_por_apellido].filter(Boolean).join(' ');
+    const team = row.team_numero;
+    const start = row.fecha_inicio ? new Date(row.fecha_inicio) : null;
+    const end = row.fecha_fin ? new Date(row.fecha_fin) : null;
+    const pad = (n) => String(n).padStart(2, '0');
+    const fechaRange = start && end
+      ? `semana del ${pad(start.getDate())} ${pad(start.getMonth() + 1)} al ${pad(end.getDate())} ${pad(end.getMonth() + 1)} del ${end.getFullYear()}`
+      : '';
+    const parts = ['Time Sheet'];
+    if (team) parts.push(`Equipo ${team}`);
+    if (nombre) parts.push(`(${nombre})`);
+    if (fechaRange) parts.push(fechaRange);
+    return parts.join(' - ');
+  };
+
   const columns = [
-    { field: 'id', label: '#', render: row => `#${row.id}` },
-    { field: 'fecha_inicio', label: 'Inicio', render: row => new Date(row.fecha_inicio).toLocaleDateString() },
-    { field: 'fecha_fin',    label: 'Fin',    render: row => new Date(row.fecha_fin).toLocaleDateString() },
+    {
+      field: 'id', label: 'Reporte',
+      render: row => buildTitle(row),
+    },
     {
       field: 'estado', label: 'Estado',
       render: row => {
-        const cfg = ESTADO_CHIP[row.estado] ?? { label: row.estado ?? 'Enviado', color: 'warning' };
-        return <Chip label={cfg.label} color={cfg.color} size="small" />;
+        const estado = row.estado || 'Enviado';
+        return <Chip label={estado} color={ESTADO_COLORS[estado] || 'default'} size="small" />;
       },
     },
     {
