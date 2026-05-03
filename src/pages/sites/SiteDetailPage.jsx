@@ -253,7 +253,7 @@ export default function SiteDetailPage() {
           address={fullAddress}
           lat={site.latitud ? Number(site.latitud) : null}
           lng={site.longitud ? Number(site.longitud) : null}
-          height={420}
+          height={{ xs: 280, sm: 420 }}
         />
         <Paper
           elevation={3}

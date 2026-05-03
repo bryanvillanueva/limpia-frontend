@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, IconButton, Tooltip, Alert, TextField } from '@mui/material';
+import { Button, IconButton, Tooltip, Alert, TextField, Box, Stack, Typography } from '@mui/material';
 import { Add, Check, Close } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
@@ -78,7 +78,49 @@ export default function VacationsPage({ mode = 'admin' }) {
         )}
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <DataTable columns={columns} rows={vacations} loading={loading} emptyMessage="No hay solicitudes de vacaciones" />
+      <DataTable
+        columns={columns}
+        rows={vacations}
+        loading={loading}
+        emptyMessage="No hay solicitudes de vacaciones"
+        mobileCardRender={(row) => {
+          const showActions = !isCleaner && user?.rol === 'admin' && row.estado === 'pendiente';
+          return (
+            <Stack spacing={1}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                {!isCleaner ? (
+                  <Typography variant="body2" fontWeight={700}>{row.empleado || '—'}</Typography>
+                ) : (
+                  <Typography variant="body2" fontWeight={700}>Solicitud</Typography>
+                )}
+                <StatusBadge value={row.estado} />
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                {new Date(row.fecha_inicio).toLocaleDateString()} — {new Date(row.fecha_fin).toLocaleDateString()}
+              </Typography>
+              {row.motivo && (
+                <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                  {row.motivo}
+                </Typography>
+              )}
+              {showActions && (
+                <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                  <Tooltip title="Aprobar">
+                    <IconButton size="small" color="success" onClick={() => setApproving(row)}>
+                      <Check fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Rechazar">
+                    <IconButton size="small" color="error" onClick={() => { setRejecting(row); setRejectReason(''); }}>
+                      <Close fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              )}
+            </Stack>
+          );
+        }}
+      />
 
       {isCleaner && <VacationRequestModal open={modalOpen} onClose={() => setModalOpen(false)} onSaved={load} />}
 

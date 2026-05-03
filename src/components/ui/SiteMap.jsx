@@ -13,10 +13,10 @@ mapboxgl.accessToken = import.meta.env.VITE_MAPBOX_TOKEN;
  * @param {string} address - Full address to geocode (fallback when no coordinates).
  * @param {number|null} lat - Latitude if available.
  * @param {number|null} lng - Longitude if available.
- * @param {number} height - Map container height in pixels.
+ * @param {number|object} height - Map container height (number px or sx-style responsive object).
  * @param {number} zoom - Initial zoom level.
  */
-export default function SiteMap({ address, lat, lng, height = 380, zoom = 15 }) {
+export default function SiteMap({ address, lat, lng, height = { xs: 260, sm: 380 }, zoom = 15 }) {
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const [error, setError] = useState('');

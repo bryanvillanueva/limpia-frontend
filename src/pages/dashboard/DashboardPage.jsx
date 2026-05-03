@@ -55,7 +55,7 @@ export default function DashboardPage() {
       <Paper
         elevation={0}
         sx={{
-          p: 3, mb: 3,
+          p: { xs: 2, md: 3 }, mb: 3,
           bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
           border: '1px solid',
           borderColor: (theme) => alpha(theme.palette.primary.main, 0.12),
@@ -64,7 +64,7 @@ export default function DashboardPage() {
         <Typography variant="body2" color="text.secondary">
           {greeting}
         </Typography>
-        <Typography variant="h5" sx={{ mt: 0.25 }}>
+        <Typography variant="h5" sx={{ mt: 0.25, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
           {user?.nombre}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -83,7 +83,7 @@ export default function DashboardPage() {
               elevation={0}
               onClick={() => navigate(link.path)}
               sx={{
-                p: 2.5, textAlign: 'center', cursor: 'pointer',
+                p: { xs: 1.5, sm: 2.5 }, textAlign: 'center', cursor: 'pointer',
                 border: '1px solid', borderColor: 'divider',
                 transition: 'all 0.15s ease',
                 '&:hover': {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Button, IconButton, Tooltip, Alert, Box, LinearProgress, Typography,
-  Avatar, TextField, InputAdornment,
+  Avatar, TextField, InputAdornment, Stack,
 } from '@mui/material';
 import { Add, Edit, Inventory2, Search, Close } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
@@ -182,6 +182,57 @@ export default function SuppliesPage() {
         rows={filteredSupplies}
         loading={loading}
         emptyMessage={searchQuery ? 'No se encontraron insumos' : 'No hay insumos registrados'}
+        mobileCardRender={(row) => (
+          <Stack spacing={1.25}>
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Avatar
+                variant="rounded"
+                src={row.imagen_url || undefined}
+                sx={{
+                  width: 56, height: 56,
+                  bgcolor: 'action.selected',
+                  flexShrink: 0,
+                  cursor: row.imagen_url ? 'pointer' : 'default',
+                }}
+                onClick={() => { if (row.imagen_url) setPreviewImage(row.imagen_url); }}
+              >
+                {!row.imagen_url && <Inventory2 color="disabled" />}
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={700} noWrap>{row.nombre}</Typography>
+                {row.descripcion && (
+                  <Typography variant="caption" color="text.secondary" sx={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}>
+                    {row.descripcion}
+                  </Typography>
+                )}
+              </Box>
+              {isAdmin && (
+                <Tooltip title="Editar">
+                  <IconButton size="small" onClick={() => { setEditing(row); setModalOpen(true); }} sx={{ flexShrink: 0 }}>
+                    <Edit fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Stack>
+            <Box sx={{ display: 'flex', gap: 2, fontSize: '0.75rem' }}>
+              <Typography variant="caption" color="text.secondary">
+                Unidad: <Typography component="span" variant="caption" fontWeight={600}>{row.unidad || '—'}</Typography>
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Precio: <Typography component="span" variant="caption" fontWeight={600}>{formatPrice(row.precio_unitario)}</Typography>
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.25 }}>Stock</Typography>
+              <StockBar actual={row.stock_actual} minimo={row.stock_minimo} />
+            </Box>
+          </Stack>
+        )}
       />
 
       <ImagePreviewDialog src={previewImage} onClose={() => setPreviewImage(null)} />

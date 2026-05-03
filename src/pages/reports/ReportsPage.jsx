@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, IconButton, Tooltip, Alert, Chip } from '@mui/material';
+import { Button, IconButton, Tooltip, Alert, Chip, Box, Stack, Typography } from '@mui/material';
 import { Add, Visibility } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
@@ -49,7 +49,35 @@ export default function ReportsPage() {
         action={<Button variant="contained" startIcon={<Add />} onClick={() => setModalOpen(true)}>Generar reporte</Button>}
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <DataTable columns={columns} rows={reports} loading={loading} emptyMessage="No hay reportes generados" />
+      <DataTable
+        columns={columns}
+        rows={reports}
+        loading={loading}
+        emptyMessage="No hay reportes generados"
+        mobileCardRender={(row) => (
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Typography variant="body2" fontWeight={700}>Reporte #{row.id}</Typography>
+              <Chip label={row.aprobado ? 'Aprobado' : 'Pendiente'} color={row.aprobado ? 'success' : 'warning'} size="small" />
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                Período: {new Date(row.fecha_inicio).toLocaleDateString()} — {new Date(row.fecha_fin).toLocaleDateString()}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                Generado: {new Date(row.created_at).toLocaleDateString()}
+              </Typography>
+            </Box>
+            <Stack direction="row" justifyContent="flex-end">
+              <Tooltip title="Ver reporte">
+                <IconButton size="small" onClick={() => navigate(`/reportes/${row.id}`)}>
+                  <Visibility fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          </Stack>
+        )}
+      />
       <GenerateReportModal open={modalOpen} onClose={() => setModalOpen(false)} onGenerated={load} />
     </>
   );

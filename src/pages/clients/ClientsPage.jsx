@@ -11,6 +11,7 @@ import {
   TextField,
   InputAdornment,
   Skeleton,
+  Stack,
   alpha,
 } from '@mui/material';
 import {
@@ -280,7 +281,7 @@ export default function ClientsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           size="small"
-          sx={{ minWidth: 280, flex: 1 }}
+          sx={{ minWidth: { xs: '100%', sm: 280 }, flex: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -301,6 +302,43 @@ export default function ClientsPage() {
             ? 'No hay clientes que coincidan con la búsqueda'
             : 'No hay clientes registrados'
         }
+        mobileCardRender={(row) => (
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={700} color="primary.main">{row.nombre}</Typography>
+                {row.email && (
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                    {row.email}
+                  </Typography>
+                )}
+              </Box>
+              {canManage && (
+                <Tooltip title="Editar">
+                  <IconButton size="small" onClick={() => { setEditing(row); setModalOpen(true); }} sx={{ flexShrink: 0 }}>
+                    <Edit fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              )}
+            </Box>
+            {(row.telefono || row.direccion) && (
+              <Stack spacing={0.5}>
+                {row.telefono && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Phone fontSize="small" color="action" />
+                    <Typography variant="body2">{row.telefono}</Typography>
+                  </Box>
+                )}
+                {row.direccion && (
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
+                    <Home fontSize="small" color="action" sx={{ mt: 0.25 }} />
+                    <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>{row.direccion}</Typography>
+                  </Box>
+                )}
+              </Stack>
+            )}
+          </Stack>
+        )}
       />
 
       <ClientFormModal

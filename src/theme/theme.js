@@ -130,10 +130,13 @@ export const getTheme = (mode) =>
       },
       MuiTableCell: {
         styleOverrides: {
-          root: {
+          root: ({ theme }) => ({
             fontSize: '0.8125rem',
             padding: '12px 16px',
-          },
+            [theme.breakpoints.down('sm')]: {
+              padding: '10px 12px',
+            },
+          }),
         },
       },
       MuiTableRow: {

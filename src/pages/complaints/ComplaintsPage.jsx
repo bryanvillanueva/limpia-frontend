@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, IconButton, Tooltip, Alert } from '@mui/material';
+import { Button, IconButton, Tooltip, Alert, Box, Stack, Typography } from '@mui/material';
 import { Add, Edit } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
@@ -61,7 +61,35 @@ export default function ComplaintsPage() {
         }
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <DataTable columns={columns} rows={complaints} loading={loading} emptyMessage="No hay quejas registradas" />
+      <DataTable
+        columns={columns}
+        rows={complaints}
+        loading={loading}
+        emptyMessage="No hay quejas registradas"
+        mobileCardRender={(row) => (
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Typography variant="body2" fontWeight={700}>{row.tipo || 'Queja'}</Typography>
+              <StatusBadge value={row.estado} />
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              {row.reportado_por || '—'} · {new Date(row.created_at).toLocaleDateString()}
+            </Typography>
+            {row.descripcion && (
+              <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                {row.descripcion}
+              </Typography>
+            )}
+            <Stack direction="row" justifyContent="flex-end">
+              <Tooltip title="Editar">
+                <IconButton size="small" onClick={() => { setEditing(row); setModalOpen(true); }}>
+                  <Edit fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          </Stack>
+        )}
+      />
       <ComplaintFormModal open={modalOpen} onClose={() => setModalOpen(false)} complaint={editing} sites={sites} onSaved={load} />
     </>
   );

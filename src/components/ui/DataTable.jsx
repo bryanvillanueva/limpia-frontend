@@ -1,6 +1,6 @@
 import {
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Paper, Skeleton,
+  Paper, Skeleton, Stack, Box, useMediaQuery, useTheme,
 } from '@mui/material';
 import EmptyState from './EmptyState';
 
@@ -11,7 +11,45 @@ export default function DataTable({
   keyField = 'id',
   emptyMessage = 'No hay datos',
   onRowClick,
+  mobileCardRender,
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  if (isMobile && mobileCardRender) {
+    return (
+      <Stack spacing={1.5}>
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={120} />
+          ))
+        ) : rows.length === 0 ? (
+          <Box sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, bgcolor: 'background.paper' }}>
+            <EmptyState message={emptyMessage} />
+          </Box>
+        ) : (
+          rows.map(row => (
+            <Box
+              key={row[keyField]}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              sx={{
+                border: '1px solid',
+                borderColor: 'divider',
+                borderRadius: 2,
+                bgcolor: 'background.paper',
+                p: 1.5,
+                cursor: onRowClick ? 'pointer' : 'default',
+                '&:hover': onRowClick ? { borderColor: 'primary.main' } : undefined,
+              }}
+            >
+              {mobileCardRender(row)}
+            </Box>
+          ))
+        )}
+      </Stack>
+    );
+  }
+
   return (
     <TableContainer
       component={Paper}

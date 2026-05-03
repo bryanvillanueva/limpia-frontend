@@ -529,7 +529,7 @@ export default function MisSitiosPage() {
           </IconButton>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1 }}>
             <CalendarMonth color="primary" fontSize="small" />
-            <Typography variant="body2" fontWeight={600} sx={{ minWidth: 140, textAlign: 'center' }}>
+            <Typography variant="body2" fontWeight={600} sx={{ minWidth: { xs: 90, sm: 140 }, textAlign: 'center' }}>
               {viewMode === 'day' ? dayLabel : weekLabel}
             </Typography>
           </Box>

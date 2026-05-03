@@ -3,6 +3,7 @@ import {
   Button, IconButton, Tooltip, Alert, Box, Typography, Avatar, TextField,
   Badge, Dialog, DialogTitle, DialogContent, DialogActions, Popover, Snackbar,
   Table, TableHead, TableBody, TableRow, TableCell, InputAdornment, MenuItem,
+  Stack, useMediaQuery, useTheme,
 } from '@mui/material';
 import {
   Add, Inventory2, Search, Close, Remove, Delete, ShoppingCartCheckout,
@@ -83,6 +84,8 @@ function CartSummaryDialog({
 }) {
   const [notas, setNotas] = useState('');
   const [equipoId, setEquipoId] = useState('');
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   useEffect(() => {
     if (open) {
@@ -94,7 +97,7 @@ function CartSummaryDialog({
   const canConfirm = cart.length > 0 && (!needsTeam || equipoId);
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth fullScreen={fullScreen}>
       <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
         <Typography variant="h6" component="span">Resumen del pedido</Typography>
         <IconButton size="small" onClick={onClose} sx={{ color: 'text.secondary' }}>
@@ -388,12 +391,52 @@ export default function OrderCatalogPage() {
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
-      <Box sx={{ pb: 10 }}>
+      <Box sx={{ pb: 12 }}>
         <DataTable
           columns={columns}
           rows={filteredSupplies}
           loading={loading}
           emptyMessage={searchQuery ? 'No se encontraron insumos' : 'No hay insumos disponibles'}
+          mobileCardRender={(row) => (
+            <Stack direction="row" spacing={1.5} alignItems="center">
+              <Avatar
+                variant="rounded"
+                src={row.imagen_url || undefined}
+                sx={{
+                  width: 56, height: 56,
+                  bgcolor: 'action.selected',
+                  flexShrink: 0,
+                  cursor: row.imagen_url ? 'pointer' : 'default',
+                }}
+                onClick={() => { if (row.imagen_url) setPreviewImage(row.imagen_url); }}
+              >
+                {!row.imagen_url && <Inventory2 color="disabled" />}
+              </Avatar>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={700} noWrap>{row.nombre}</Typography>
+                {row.descripcion && (
+                  <Typography variant="caption" color="text.secondary" sx={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}>
+                    {row.descripcion}
+                  </Typography>
+                )}
+                {row.unidad && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    Unidad: {row.unidad}
+                  </Typography>
+                )}
+              </Box>
+              <Tooltip title="+ Agregar producto">
+                <IconButton size="small" color="primary" onClick={(e) => openCartPopover(e, row)} sx={{ flexShrink: 0 }}>
+                  <Add />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+          )}
         />
       </Box>
 
@@ -447,10 +490,26 @@ export default function OrderCatalogPage() {
             startIcon={<ShoppingCartCheckout />}
             onClick={() => setSummaryOpen(true)}
             disabled={cart.length === 0}
-            sx={{ whiteSpace: 'nowrap' }}
+            sx={{ whiteSpace: 'nowrap', display: { xs: 'none', sm: 'inline-flex' } }}
           >
             Completar pedido
           </Button>
+          <IconButton
+            color="primary"
+            onClick={() => setSummaryOpen(true)}
+            disabled={cart.length === 0}
+            sx={{
+              display: { xs: 'inline-flex', sm: 'none' },
+              bgcolor: cart.length > 0 ? 'primary.main' : 'transparent',
+              color: cart.length > 0 ? 'primary.contrastText' : 'text.secondary',
+              border: cart.length === 0 ? '1px solid' : 'none',
+              borderColor: 'divider',
+              '&:hover': { bgcolor: cart.length > 0 ? 'primary.dark' : 'action.hover' },
+              '&.Mui-disabled': { color: 'text.disabled' },
+            }}
+          >
+            <ShoppingCartCheckout />
+          </IconButton>
         </Badge>
       </Box>
 

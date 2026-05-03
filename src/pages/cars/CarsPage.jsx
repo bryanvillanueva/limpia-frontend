@@ -7,7 +7,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Button, IconButton, Tooltip, Alert, Typography, Paper, TextField,
-  InputAdornment, MenuItem, Box, Chip,
+  InputAdornment, MenuItem, Box, Chip, Stack,
 } from '@mui/material';
 import { Add, Edit, Visibility, Search, DirectionsCar } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -182,7 +182,7 @@ export default function CarsPage() {
             placeholder="Buscar por matrícula, marca, modelo, año o equipo…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            sx={{ flex: 1, minWidth: 240 }}
+            sx={{ flex: 1, minWidth: { xs: '100%', sm: 240 } }}
             slotProps={{
               input: {
                 startAdornment: (
@@ -199,7 +199,7 @@ export default function CarsPage() {
             label="Tipo"
             value={filterTipo}
             onChange={(e) => setFilterTipo(e.target.value)}
-            sx={{ minWidth: 160 }}
+            sx={{ minWidth: 160, flex: { xs: 1, sm: 'unset' } }}
           >
             <MenuItem value="">Todos</MenuItem>
             {tipos.map((t) => (
@@ -215,6 +215,49 @@ export default function CarsPage() {
         loading={loading}
         emptyMessage={search || filterTipo ? 'Sin resultados para la búsqueda' : 'No hay vehículos registrados'}
         onRowClick={(row) => navigate(`/vehiculos/${row.id}`)}
+        mobileCardRender={(row) => {
+          const marcaModelo = [row.marca, row.modelo].filter(Boolean).join(' ');
+          return (
+            <Stack spacing={1}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={700}>{row.matricula}</Typography>
+                  {(marcaModelo || row.version) && (
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                      {marcaModelo}{row.version ? ` · ${row.version}` : ''}
+                    </Typography>
+                  )}
+                </Box>
+                <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+                  {row.tipo && <Chip label={row.tipo} size="small" variant="outlined" />}
+                  {row.equipo_numero && <Chip label={`Eq ${row.equipo_numero}`} size="small" color="primary" variant="outlined" />}
+                </Stack>
+              </Box>
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  Próx. mantenimiento: {fmtDate(row.proximo_mantenimiento_fecha)}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  Rego: {fmtDate(row.fecha_rego)}
+                </Typography>
+              </Box>
+              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                <Tooltip title="Ver detalle">
+                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); navigate(`/vehiculos/${row.id}`); }}>
+                    <Visibility fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                {isAdmin && (
+                  <Tooltip title="Editar">
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); setEditing(row); setModalOpen(true); }}>
+                      <Edit fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+            </Stack>
+          );
+        }}
       />
 
       <CarFormModal

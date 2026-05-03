@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import {
-  Box, Typography, IconButton, Button, Skeleton, Popover, alpha,
+  Box, Typography, IconButton, Button, Skeleton, Popover, useMediaQuery, useTheme, alpha,
 } from '@mui/material';
 import { Delete, Circle, RemoveCircleOutline, Add } from '@mui/icons-material';
 import EmptyState from './EmptyState';
 
 const DAY_LABELS = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM'];
+const DAY_LABELS_FULL = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO', 'DOMINGO'];
 
 const COLOR_MAP = {
   yellow: { bg: '#FFF9C4', border: '#F9A825' },
@@ -221,15 +222,27 @@ export default function WeekColumnGrid({
   onColorChange,
   onAddItem,
 }) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 1 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: { xs: 1.5, md: 1 },
+          overflowX: { md: 'auto' },
+          pb: 1,
+        }}
+      >
         {DAY_LABELS.map((label, idx) => (
           <Box
             key={idx}
             sx={{
-              flex: '1 0 0',
-              minWidth: 150,
+              flex: { md: '1 0 0' },
+              minWidth: { md: 150 },
+              width: { xs: '100%', md: 'auto' },
               border: '1px solid',
               borderColor: 'divider',
               borderRadius: 1,
@@ -237,7 +250,9 @@ export default function WeekColumnGrid({
             }}
           >
             <Box sx={{ bgcolor: 'action.hover', px: 1, py: 1, textAlign: 'center' }}>
-              <Typography variant="caption" fontWeight={700}>{label}</Typography>
+              <Typography variant="caption" fontWeight={700}>
+                {isMobile ? DAY_LABELS_FULL[idx] : label}
+              </Typography>
             </Box>
             <Box sx={{ p: 1 }}>
               {[1, 2, 3].map(i => <Skeleton key={i} height={40} sx={{ mb: 0.5 }} />)}
@@ -257,7 +272,15 @@ export default function WeekColumnGrid({
 
   return (
     <Box>
-    <Box sx={{ display: 'flex', gap: 0.5, overflowX: 'auto', pb: 1 }}>
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: { xs: 'column', md: 'row' },
+        gap: { xs: 1.5, md: 0.5 },
+        overflowX: { md: 'auto' },
+        pb: 1,
+      }}
+    >
       {DAY_LABELS.map((label, idx) => {
         const dayNum = idx + 1;
         const entries = columnData[dayNum] || [];
@@ -267,8 +290,9 @@ export default function WeekColumnGrid({
           <Box
             key={dayNum}
             sx={{
-              flex: '1 0 0',
-              minWidth: 150,
+              flex: { md: '1 0 0' },
+              minWidth: { md: 150 },
+              width: { xs: '100%', md: 'auto' },
               border: '1px solid',
               borderColor: 'divider',
               borderRadius: 1,
@@ -280,19 +304,28 @@ export default function WeekColumnGrid({
             {/* Column header */}
             <Box
               sx={{
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                bgcolor: (t) => alpha(t.palette.primary.main, 0.08),
                 px: 1,
-                py: 0.75,
-                textAlign: 'center',
+                py: { xs: 1, md: 0.75 },
+                display: 'flex',
+                flexDirection: { xs: 'row', md: 'column' },
+                alignItems: 'center',
+                justifyContent: { xs: 'space-between', md: 'center' },
+                textAlign: { xs: 'left', md: 'center' },
                 borderBottom: '1px solid',
                 borderColor: 'divider',
               }}
             >
-              <Typography variant="caption" fontWeight={700} sx={{ fontSize: '0.75rem' }}>
-                {label}
+              <Typography variant="caption" fontWeight={700} sx={{ fontSize: { xs: '0.85rem', md: '0.75rem' } }}>
+                {isMobile ? DAY_LABELS_FULL[idx] : label}
               </Typography>
-              <Typography variant="caption" display="block" color="text.secondary" sx={{ fontSize: '0.6rem' }}>
-                TIEMPO
+              <Typography
+                variant="caption"
+                color={isMobile ? 'primary.main' : 'text.secondary'}
+                fontWeight={isMobile ? 700 : 400}
+                sx={{ fontSize: { xs: '0.75rem', md: '0.6rem' } }}
+              >
+                {isMobile ? (total > 0 ? `${total.toFixed(2)}h` : '—') : 'TIEMPO'}
               </Typography>
             </Box>
 
@@ -331,21 +364,23 @@ export default function WeekColumnGrid({
               )}
             </Box>
 
-            {/* Column footer — daily total */}
-            <Box
-              sx={{
-                bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
-                px: 1,
-                py: 0.5,
-                textAlign: 'center',
-                borderTop: '1px solid',
-                borderColor: 'divider',
-              }}
-            >
-              <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ fontSize: '0.75rem' }}>
-                {total > 0 ? `${total.toFixed(2)}h` : '—'}
-              </Typography>
-            </Box>
+            {/* Column footer — daily total (hidden on mobile, shown in header) */}
+            {!isMobile && (
+              <Box
+                sx={{
+                  bgcolor: (t) => alpha(t.palette.primary.main, 0.04),
+                  px: 1,
+                  py: 0.5,
+                  textAlign: 'center',
+                  borderTop: '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Typography variant="caption" fontWeight={700} color="primary.main" sx={{ fontSize: '0.75rem' }}>
+                  {total > 0 ? `${total.toFixed(2)}h` : '—'}
+                </Typography>
+              </Box>
+            )}
           </Box>
         );
       })}

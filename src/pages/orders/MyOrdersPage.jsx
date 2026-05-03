@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, IconButton, Tooltip, Alert } from '@mui/material';
+import { Button, IconButton, Tooltip, Alert, Box, Stack, Typography } from '@mui/material';
 import { Visibility, Add } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
@@ -70,7 +70,35 @@ export default function MyOrdersPage() {
         }
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <DataTable columns={columns} rows={orders} loading={loading} emptyMessage="No hay pedidos aún" />
+      <DataTable
+        columns={columns}
+        rows={orders}
+        loading={loading}
+        emptyMessage="No hay pedidos aún"
+        mobileCardRender={(row) => {
+          const raw = row.fecha ?? row.created_at;
+          const d = raw ? new Date(raw) : null;
+          const fecha = d && !isNaN(d.getTime()) ? d.toLocaleDateString() : '—';
+          return (
+            <Stack spacing={1}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Typography variant="body2" fontWeight={700}>Pedido #{row.id}</Typography>
+                <StatusBadge value={row.estado} />
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                {row.solicitante || '—'} · {fecha}
+              </Typography>
+              <Stack direction="row" justifyContent="flex-end">
+                <Tooltip title="Ver detalle">
+                  <IconButton size="small" onClick={() => setSelectedOrder(row)}>
+                    <Visibility fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Stack>
+          );
+        }}
+      />
       <OrderDetailModal
         open={!!selectedOrder}
         orderData={selectedOrder}

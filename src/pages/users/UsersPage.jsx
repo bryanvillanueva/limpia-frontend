@@ -12,6 +12,8 @@ import {
   TextField,
   InputAdornment,
   MenuItem,
+  Stack,
+  Divider,
   alpha,
 } from '@mui/material';
 import {
@@ -399,7 +401,7 @@ export default function UsersPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           size="small"
-          sx={{ minWidth: 280, flex: 1 }}
+          sx={{ minWidth: { xs: '100%', sm: 280 }, flex: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -414,7 +416,7 @@ export default function UsersPage() {
           value={filterRole}
           onChange={(e) => setFilterRole(e.target.value)}
           size="small"
-          sx={{ minWidth: 140 }}
+          sx={{ minWidth: 140, flex: { xs: 1, sm: 'unset' } }}
         >
           <MenuItem value="all">Todos los roles</MenuItem>
           {Object.entries(ROLE_LABELS).map(([key, label]) => (
@@ -427,7 +429,7 @@ export default function UsersPage() {
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           size="small"
-          sx={{ minWidth: 140 }}
+          sx={{ minWidth: 140, flex: { xs: 1, sm: 'unset' } }}
         >
           <MenuItem value="all">Todos</MenuItem>
           <MenuItem value="active">Activos</MenuItem>
@@ -442,6 +444,95 @@ export default function UsersPage() {
         loading={loading}
         emptyMessage="No hay usuarios que coincidan con los filtros"
         onRowClick={handleView}
+        mobileCardRender={(row) => {
+          const visaStatus = getVisaStatus(row.fecha_vencimiento_visa);
+          return (
+            <Stack spacing={1.25}>
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                <Box sx={{ minWidth: 0 }}>
+                  <Typography variant="body2" fontWeight={700} color="primary.main" noWrap>
+                    {row.nombre} {row.apellido}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
+                    {row.email || '—'}
+                  </Typography>
+                </Box>
+                <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
+                  <Chip
+                    label={ROLE_LABELS[row.rol] || row.rol}
+                    color={ROLE_COLORS[row.rol] || 'default'}
+                    size="small"
+                  />
+                  <Chip
+                    label={row.activo ? 'Activo' : 'Inactivo'}
+                    color={row.activo ? 'success' : 'default'}
+                    size="small"
+                    variant={row.activo ? 'filled' : 'outlined'}
+                  />
+                </Stack>
+              </Box>
+
+              <Divider />
+
+              <Stack spacing={0.5}>
+                {row.telefono && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    <Phone fontSize="small" color="action" />
+                    <Typography variant="body2">{row.telefono}</Typography>
+                  </Box>
+                )}
+                {row.direccion && (
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 0.75 }}>
+                    <Home fontSize="small" color="action" sx={{ mt: 0.25 }} />
+                    <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                      {row.direccion}
+                    </Typography>
+                  </Box>
+                )}
+                {(row.tipo_visa || row.fecha_vencimiento_visa) && (
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                    {visaStatus === 'expired' && <Warning fontSize="small" color="error" />}
+                    {visaStatus === 'warning' && <Warning fontSize="small" color="warning" />}
+                    <Typography variant="body2">
+                      Visa: {row.tipo_visa || '—'} ·{' '}
+                      <Typography
+                        component="span"
+                        variant="body2"
+                        color={visaStatus === 'expired' ? 'error.main' : visaStatus === 'warning' ? 'warning.main' : 'text.secondary'}
+                      >
+                        {formatDate(row.fecha_vencimiento_visa)}
+                      </Typography>
+                    </Typography>
+                  </Box>
+                )}
+              </Stack>
+
+              <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end', pt: 0.5 }}>
+                <Tooltip title="Ver detalle">
+                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleView(row); }}>
+                    <Visibility fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                {isAdmin && (
+                  <>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={(e) => { e.stopPropagation(); handleEdit(row); }}>
+                        <Edit fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    {row.activo && (
+                      <Tooltip title="Desactivar">
+                        <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); setDeactivating(row); }}>
+                          <PersonOff fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                  </>
+                )}
+              </Stack>
+            </Stack>
+          );
+        }}
       />
 
       <UserDetailModal

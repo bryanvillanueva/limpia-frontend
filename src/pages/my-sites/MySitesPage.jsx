@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   IconButton, Tooltip, Alert, Box, Typography,
-  Paper, TextField, InputAdornment, Chip,
+  Paper, TextField, InputAdornment, Chip, Stack,
 } from '@mui/material';
 import { Visibility, Search, LocationOn, Schedule, AccessTime } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -143,7 +143,7 @@ export default function MySitesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           size="small"
-          sx={{ minWidth: 280, flex: 1 }}
+          sx={{ minWidth: { xs: '100%', sm: 280 }, flex: 1 }}
           slotProps={{
             input: {
               startAdornment: (
@@ -161,6 +161,38 @@ export default function MySitesPage() {
         rows={filteredSites}
         loading={loading}
         emptyMessage={search ? 'No hay sitios que coincidan con tu búsqueda' : 'No tienes sitios asignados por el momento'}
+        mobileCardRender={(row) => (
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={700}>
+                  {row.direccion_linea1 || '—'}
+                </Typography>
+                {(row.suburb || row.state) && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    {[row.suburb, row.state, row.postcode].filter(Boolean).join(', ')}
+                  </Typography>
+                )}
+              </Box>
+              <Tooltip title="Ver detalle">
+                <IconButton size="small" onClick={() => navigate(`/sitios/${row.id}`)} sx={{ flexShrink: 0 }}>
+                  <Visibility fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            </Box>
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              {row.frecuencia && (
+                <Chip label={row.frecuencia} size="small" variant="outlined" icon={<Schedule sx={{ fontSize: 14 }} />} />
+              )}
+              {row.horas_por_trabajador != null && (
+                <Chip label={`${row.horas_por_trabajador}h`} size="small" variant="outlined" icon={<AccessTime sx={{ fontSize: 14 }} />} />
+              )}
+              {row.hace_bins && (
+                <Chip label={row.pago_bins != null ? `Bins $${row.pago_bins}` : 'Bins'} size="small" color="success" />
+              )}
+            </Stack>
+          </Stack>
+        )}
       />
     </>
   );

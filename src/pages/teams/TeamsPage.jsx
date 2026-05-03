@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Button, IconButton, Tooltip, TextField, DialogActions, Alert,
   Switch, FormControlLabel, Paper, Typography, Chip, MenuItem,
-  Grid, Skeleton, InputAdornment, alpha,
+  Grid, Skeleton, InputAdornment, Stack, Divider, alpha,
 } from '@mui/material';
 import {
   Add, Edit, Visibility, Search, Groups, CheckCircle, Cancel, People,
@@ -265,7 +265,7 @@ export default function TeamsPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           size="small"
-          sx={{ minWidth: 280, flex: 1 }}
+          sx={{ minWidth: { xs: '100%', sm: 280 }, flex: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -280,7 +280,7 @@ export default function TeamsPage() {
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           size="small"
-          sx={{ minWidth: 140 }}
+          sx={{ minWidth: 140, flex: { xs: 1, sm: 'unset' } }}
         >
           <MenuItem value="all">Todos</MenuItem>
           <MenuItem value="active">Activos</MenuItem>
@@ -299,6 +299,46 @@ export default function TeamsPage() {
             ? 'No hay equipos que coincidan con los filtros'
             : 'No hay equipos registrados'
         }
+        mobileCardRender={(row) => {
+          const members = row.members || [];
+          return (
+            <Stack spacing={1}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Typography variant="body2" fontWeight={700}>Equipo {row.numero}</Typography>
+                <StatusBadge value={row.activo ? 'activo' : 'inactivo'} />
+              </Box>
+              <Divider />
+              <Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                  {members.length === 0 ? 'Sin miembros' : `${members.length} ${members.length === 1 ? 'miembro' : 'miembros'}`}
+                </Typography>
+                {members.length > 0 && (
+                  <Stack spacing={0.25}>
+                    {members.map(m => (
+                      <Typography key={m.id} variant="body2">
+                        {m.nombre} {m.apellido}
+                      </Typography>
+                    ))}
+                  </Stack>
+                )}
+              </Box>
+              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                <Tooltip title="Ver detalle">
+                  <IconButton size="small" onClick={(e) => { e.stopPropagation(); navigate(`/equipos/${row.id}`); }}>
+                    <Visibility fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                {isAdmin && (
+                  <Tooltip title="Editar">
+                    <IconButton size="small" onClick={(e) => { e.stopPropagation(); openEdit(row); }}>
+                      <Edit fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                )}
+              </Stack>
+            </Stack>
+          );
+        }}
       />
 
       {/* Create/Edit Team Modal */}

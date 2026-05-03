@@ -5,7 +5,7 @@
  * Admin users can create, edit, delete, and import tools.
  */
 import { useState, useEffect, useCallback } from 'react';
-import { Button, IconButton, Tooltip, Alert, Box, Typography, Chip } from '@mui/material';
+import { Button, IconButton, Tooltip, Alert, Box, Typography, Chip, Stack } from '@mui/material';
 import { Add, Edit, Delete, Upload, CheckCircle, Cancel } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
@@ -117,18 +117,64 @@ export default function ToolsPage() {
       <PageHeader
         title="Herramientas"
         action={isAdmin && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Button variant="outlined" startIcon={<Upload />} onClick={() => setImportModalOpen(true)}>
               Importar Herramientas
             </Button>
             <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true); }}>
               Nueva herramienta
             </Button>
-          </Box>
+          </Stack>
         )}
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <DataTable columns={columns} rows={tools} loading={loading} emptyMessage="No hay herramientas registradas" />
+      <DataTable
+        columns={columns}
+        rows={tools}
+        loading={loading}
+        emptyMessage="No hay herramientas registradas"
+        mobileCardRender={(row) => (
+          <Stack spacing={1}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={700}>{row.nombre}</Typography>
+                {row.code && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    {row.code}
+                  </Typography>
+                )}
+              </Box>
+              <StatusBadge value={row.ubicacion || 'oficina'} />
+            </Box>
+            {row.descripcion && (
+              <Typography variant="caption" color="text.secondary">{row.descripcion}</Typography>
+            )}
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+              <Typography variant="caption">Precio: <strong>{fmtPrice(row.precio_unitario)}</strong></Typography>
+              {row.equipo_numero && (
+                <Chip label={`Equipo ${row.equipo_numero}`} size="small" color="primary" variant="outlined" />
+              )}
+              {row.requiere_mantenimiento && (
+                <Chip label="Requiere mantenimiento" size="small" color="warning" variant="outlined" icon={<CheckCircle sx={{ fontSize: 14 }} />} />
+              )}
+            </Stack>
+            {isAdmin && (
+              <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                <Tooltip title="Editar">
+                  <IconButton size="small" onClick={() => { setEditing(row); setModalOpen(true); }}>
+                    <Edit fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Eliminar">
+                  <IconButton size="small" color="error" onClick={() => setDeleting(row)}>
+                    <Delete fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            )}
+          </Stack>
+        )}
+      />
       <ToolFormModal open={modalOpen} onClose={() => setModalOpen(false)} tool={editing} onSaved={load} />
       <ConfirmDialog
         open={!!deleting}

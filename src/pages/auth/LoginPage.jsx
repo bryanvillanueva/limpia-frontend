@@ -98,12 +98,12 @@ export default function LoginPage() {
           }}
         >
           {/* Logo */}
-          <Box sx={{ mb: 5 }}>
+          <Box sx={{ mb: { xs: 3, sm: 5 } }}>
             <Box
               component="img"
               src={logo}
               alt="Limpia Cleaning"
-              sx={{ height: 152, display: 'block',  }}
+              sx={{ height: { xs: 100, sm: 152 }, display: 'block' }}
             />
           </Box>
 
@@ -307,7 +307,7 @@ export default function LoginPage() {
             bottom: 0,
             left: 0,
             right: 0,
-            p: 5,
+            p: { xs: 3, sm: 5 },
             zIndex: 2,
           }}
         >

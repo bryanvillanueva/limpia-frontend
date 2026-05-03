@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Box, Alert, Typography, Chip, Button, IconButton, Tooltip, Paper } from '@mui/material';
+import { Box, Alert, Typography, Chip, Button, IconButton, Tooltip, Paper, Stack } from '@mui/material';
 import { Add, Visibility, CalendarMonth } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
@@ -93,6 +93,27 @@ export default function MyReportsPage() {
         rows={reports}
         loading={loading}
         emptyMessage="Aún no tienes reportes generados"
+        mobileCardRender={(row) => {
+          const cfg = ESTADO_CHIP[row.estado] ?? { label: row.estado ?? 'Enviado', color: 'warning' };
+          return (
+            <Stack spacing={1}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                <Typography variant="body2" fontWeight={700}>Reporte #{row.id}</Typography>
+                <Chip label={cfg.label} color={cfg.color} size="small" />
+              </Box>
+              <Typography variant="caption" color="text.secondary">
+                {new Date(row.fecha_inicio).toLocaleDateString()} — {new Date(row.fecha_fin).toLocaleDateString()}
+              </Typography>
+              <Stack direction="row" justifyContent="flex-end">
+                <Tooltip title="Ver reporte">
+                  <IconButton size="small" onClick={() => navigate(`/mis-reportes/${row.id}`)}>
+                    <Visibility fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+              </Stack>
+            </Stack>
+          );
+        }}
       />
 
       <GenerateMyReportModal

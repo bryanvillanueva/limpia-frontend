@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Button, IconButton, Tooltip, Alert, Box, Typography,
-  Paper, TextField, InputAdornment, MenuItem, Grid, Chip, alpha,
+  Paper, TextField, InputAdornment, MenuItem, Grid, Chip, Stack, Divider, alpha,
 } from '@mui/material';
 import { Add, Edit, Visibility, Block, Upload, Search, LocationOn, CheckCircle, Cancel, Groups } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -196,14 +196,14 @@ export default function SitesPage() {
       <PageHeader
         title="Sitios"
         action={isAdmin && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', sm: 'auto' } }}>
             <Button variant="outlined" startIcon={<Upload />} onClick={() => setImportModalOpen(true)}>
               Importar Sitios
             </Button>
             <Button variant="contained" startIcon={<Add />} onClick={() => { setEditing(null); setModalOpen(true); }}>
               Nuevo sitio
             </Button>
-          </Box>
+          </Stack>
         )}
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
@@ -239,7 +239,7 @@ export default function SitesPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           size="small"
-          sx={{ minWidth: 280, flex: 1 }}
+          sx={{ minWidth: { xs: '100%', sm: 280 }, flex: 1 }}
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
@@ -254,7 +254,7 @@ export default function SitesPage() {
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
           size="small"
-          sx={{ minWidth: 140 }}
+          sx={{ minWidth: 140, flex: { xs: 1, sm: 'unset' } }}
         >
           <MenuItem value="all">Todos</MenuItem>
           <MenuItem value="active">Activos</MenuItem>
@@ -267,6 +267,70 @@ export default function SitesPage() {
         rows={filteredSites}
         loading={loading}
         emptyMessage={search || filterStatus !== 'all' ? 'No hay sitios que coincidan con los filtros' : 'No hay sitios registrados'}
+        mobileCardRender={(row) => (
+          <Stack spacing={1.25}>
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography variant="body2" fontWeight={700}>
+                  {row.direccion_linea1 || '—'}
+                </Typography>
+                {(row.suburb || row.state) && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                    {[row.suburb, row.state, row.postcode].filter(Boolean).join(', ')}
+                  </Typography>
+                )}
+                {row.cliente_nombre && (
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25 }}>
+                    Cliente: {row.cliente_nombre}
+                  </Typography>
+                )}
+              </Box>
+              <Box sx={{ flexShrink: 0 }}>
+                <StatusBadge value={row.activo ? 'activo' : 'inactivo'} />
+              </Box>
+            </Box>
+
+            {row.equipos && (
+              <>
+                <Divider />
+                <Box>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
+                    Equipos
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                    {row.equipos.split(', ').map(num => (
+                      <Chip key={num} label={num} size="small" variant="outlined" icon={<Groups sx={{ fontSize: 14 }} />} />
+                    ))}
+                  </Box>
+                </Box>
+              </>
+            )}
+
+            <Stack direction="row" spacing={0.5} sx={{ justifyContent: 'flex-end', pt: 0.5 }}>
+              <Tooltip title="Ver detalle">
+                <IconButton size="small" onClick={() => navigate(`/sitios/${row.id}`)}>
+                  <Visibility fontSize="small" />
+                </IconButton>
+              </Tooltip>
+              {isAdmin && (
+                <>
+                  <Tooltip title="Editar">
+                    <IconButton size="small" onClick={() => { setEditing(row); setModalOpen(true); }}>
+                      <Edit fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  {row.activo && (
+                    <Tooltip title="Desactivar">
+                      <IconButton size="small" color="error" onClick={() => setDeactivating(row)}>
+                        <Block fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </>
+              )}
+            </Stack>
+          </Stack>
+        )}
       />
       <SiteFormModal open={modalOpen} onClose={() => setModalOpen(false)} site={editing} clients={clients} teams={teams} onSaved={load} />
       <ConfirmDialog

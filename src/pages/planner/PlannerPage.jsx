@@ -265,7 +265,7 @@ export default function PlannerPage() {
             renderInput={(params) => (
               <TextField {...params} label="Equipo" size="small" />
             )}
-            sx={{ minWidth: 200 }}
+            sx={{ minWidth: { xs: '100%', sm: 200 }, flex: { xs: 1, sm: 'unset' } }}
             disableClearable
           />
         )}
