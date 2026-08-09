@@ -2,10 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, ToggleButton, ToggleButtonGroup, TextField,
-  Typography, Box, Alert, Autocomplete,
+  Typography, Box, Alert, Autocomplete, InputAdornment,
 } from '@mui/material';
-import { Delete } from '@mui/icons-material';
+import { Delete, Search } from '@mui/icons-material';
 import { createLog, updateLog, deleteLog } from '../../services/logs.service';
+import { searchSites } from '../../services/sites.service';
 
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -34,6 +35,9 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
   const isEdit = !!existingLog;
 
   const [selectedSite, setSelectedSite] = useState(null);
+  const [siteInputValue, setSiteInputValue] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
   const [logDate, setLogDate] = useState('');
   const [entryType, setEntryType] = useState('SERVICE');
   const [customValue, setCustomValue] = useState('');
@@ -60,10 +64,36 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
       }
       setError('');
       setConfirmDelete(false);
+      setSiteInputValue('');
+      setSearchResults([]);
     }
   }, [open, site, fecha, plannerEntry, existingLog]);
 
+  // Debounced search across all active sites (for occasional sites not assigned to the team)
+  useEffect(() => {
+    const q = siteInputValue.trim();
+    if (q.length < 2) { setSearchResults([]); setSearching(false); return; }
+    let cancelled = false;
+    setSearching(true);
+    const timer = setTimeout(() => {
+      searchSites(q)
+        .then((results) => { if (!cancelled) setSearchResults(results || []); })
+        .catch(() => { if (!cancelled) setSearchResults([]); })
+        .finally(() => { if (!cancelled) setSearching(false); });
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [siteInputValue]);
+
+  // Team sites (with rates) + search results not already in the team list (occasional sites)
+  const siteOptions = useMemo(() => {
+    const teamIds = new Set((teamSites || []).map((t) => t.site_id ?? t.id));
+    const extra = searchResults.filter((r) => !teamIds.has(r.id));
+    return [...(teamSites || []), ...extra];
+  }, [teamSites, searchResults]);
+
   const effectiveSite = selectedSite;
+  const isTeamSite = (s) => !!s && (teamSites || []).some((t) => (t.site_id ?? t.id) === (s.site_id ?? s.id));
+  const isOccasionalSite = !!effectiveSite && !isTeamSite(effectiveSite);
   const canBins = effectiveSite?.hace_bins === 1;
   const isCustom = entryType === 'CUSTOM';
 
@@ -150,17 +180,53 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
         {/* Site selector — only when no site pre-selected and creating */}
         {!site && !isEdit && teamSites && (
           <Autocomplete
+            autoFocus
+            openOnFocus
             value={selectedSite}
             onChange={(_, val) => {
               setSelectedSite(val);
-              if (val && !val.hace_bins && entryType === 'BINS') setEntryType('SERVICE');
+              if (val && !isTeamSite(val)) {
+                setEntryType('CUSTOM');
+              } else if (val && !val.hace_bins && entryType === 'BINS') {
+                setEntryType('SERVICE');
+              }
             }}
-            options={teamSites}
+            onInputChange={(_, val) => setSiteInputValue(val)}
+            options={siteOptions}
             getOptionLabel={siteLabel}
             isOptionEqualToValue={(opt, val) => (opt.site_id ?? opt.id) === (val.site_id ?? val.id)}
-            renderInput={(params) => <TextField {...params} label="Sitio" size="small" />}
-            noOptionsText="No hay sitios disponibles"
+            loading={searching}
+            loadingText="Buscando..."
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Buscar sitio"
+                placeholder="Escribe una dirección o suburbio..."
+                size="small"
+                slotProps={{
+                  input: {
+                    ...params.InputProps,
+                    startAdornment: (
+                      <>
+                        <InputAdornment position="start">
+                          <Search fontSize="small" color="action" />
+                        </InputAdornment>
+                        {params.InputProps.startAdornment}
+                      </>
+                    ),
+                  },
+                }}
+              />
+            )}
+            noOptionsText={siteInputValue.trim().length < 2 ? 'Escribe al menos 2 letras para buscar' : 'No hay sitios disponibles'}
           />
+        )}
+
+        {/* Occasional site hint — site is not assigned to the user's team */}
+        {isOccasionalSite && (
+          <Alert severity="info" sx={{ mt: -1 }}>
+            Este sitio no está asignado a tu equipo. Ingresá el valor a cobrar manualmente en "Otro".
+          </Alert>
         )}
 
         {/* Site name (when pre-selected or editing) */}
@@ -202,9 +268,11 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
             size="small"
             fullWidth
           >
-            <ToggleButton value="SERVICE" sx={{ textTransform: 'none', fontWeight: 600 }}>Service</ToggleButton>
-            <ToggleButton value="BINS" disabled={!canBins} sx={{ textTransform: 'none', fontWeight: 600 }}>
-              Bins{!canBins && effectiveSite ? ' (N/A)' : ''}
+            <ToggleButton value="SERVICE" disabled={isOccasionalSite} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              Service{isOccasionalSite ? ' (N/A)' : ''}
+            </ToggleButton>
+            <ToggleButton value="BINS" disabled={!canBins || isOccasionalSite} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              Bins{(!canBins || isOccasionalSite) && effectiveSite ? ' (N/A)' : ''}
             </ToggleButton>
             <ToggleButton value="CUSTOM" sx={{ textTransform: 'none', fontWeight: 600 }}>Otro</ToggleButton>
           </ToggleButtonGroup>

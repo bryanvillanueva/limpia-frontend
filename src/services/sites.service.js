@@ -9,6 +9,15 @@ export const getSites = () => apiClient.get('/sites').then(r => r.data);
  * @returns {Promise<Array>} Sites with assignment details (frecuencia, horas_por_trabajador, etc.)
  */
 export const getMySites = () => apiClient.get('/sites/my-sites').then(r => r.data);
+
+/**
+ * Searches active sites by address, suburb, or client name.
+ * Open to any authenticated role — used to log occasional/one-off sites
+ * that are not assigned to the user's team (e.g. covering for a teammate).
+ * @param {string} q - Search text (min 2 chars, enforced server-side).
+ * @returns {Promise<Array>} Up to 20 matching sites (no rate info included).
+ */
+export const searchSites = (q) => apiClient.get('/sites/search', { params: { q } }).then(r => r.data);
 export const getSiteById = (id) => apiClient.get(`/sites/${id}`).then(r => r.data);
 export const createSite = (data) => apiClient.post('/sites', data).then(r => r.data);
 export const updateSite = (id, data) => apiClient.put(`/sites/${id}`, data).then(r => r.data);
