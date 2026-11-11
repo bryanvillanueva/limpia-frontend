@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Box, Alert, Typography, Chip, Button, IconButton, Tooltip, Paper, Stack } from '@mui/material';
-import { Add, Visibility, CalendarMonth } from '@mui/icons-material';
+import { Add, Visibility, CalendarMonth, DeleteOutline } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import GenerateMyReportModal from './GenerateMyReportModal';
-import { getMyReports, getCycle } from '../../services/reports.service';
+import { getMyReports, getCycle, deleteReport } from '../../services/reports.service';
 import StatusBadge from '../../components/ui/StatusBadge';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 export default function MyReportsPage() {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export default function MyReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(null); // draft pending confirmation
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -31,6 +33,25 @@ export default function MyReportsPage() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  /** Deletes the draft the user confirmed, then refreshes the list. */
+  const handleDeleteDraft = async () => {
+    try {
+      await deleteReport(deleting.id);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo eliminar el borrador');
+    }
+  };
+
+  /** Trash button, only for drafts (reports that were never sent). */
+  const deleteButton = (row) => row.estado === 'Borrador' && (
+    <Tooltip title="Eliminar borrador">
+      <IconButton size="small" color="error" onClick={(e) => { e.stopPropagation(); setDeleting(row); }}>
+        <DeleteOutline fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
 
   const buildTitle = (row) => {
     const nombre = [row.generado_por, row.generado_por_apellido].filter(Boolean).join(' ');
@@ -63,11 +84,14 @@ export default function MyReportsPage() {
     {
       field: 'actions', label: '', align: 'right',
       render: row => (
-        <Tooltip title="Ver reporte">
-          <IconButton size="small" onClick={() => navigate(`/mis-reportes/${row.id}`)}>
-            <Visibility fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Tooltip title="Ver reporte">
+            <IconButton size="small" onClick={() => navigate(`/mis-reportes/${row.id}`)}>
+              <Visibility fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          {deleteButton(row)}
+        </Box>
       ),
     },
   ];
@@ -119,10 +143,19 @@ export default function MyReportsPage() {
                     <Visibility fontSize="small" />
                   </IconButton>
                 </Tooltip>
+                {deleteButton(row)}
               </Stack>
             </Stack>
           );
         }}
+      />
+
+      <ConfirmDialog
+        open={!!deleting}
+        title="¿Eliminar este borrador?"
+        message="Se eliminará el borrador del reporte. Tus logs no se borran y podrás generar otro reporte cuando quieras. Esta acción no se puede deshacer."
+        onConfirm={handleDeleteDraft}
+        onClose={() => setDeleting(null)}
       />
 
       <GenerateMyReportModal

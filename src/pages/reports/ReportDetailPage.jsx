@@ -6,11 +6,12 @@ import {
   alpha, TextField, InputAdornment, MenuItem, Dialog, DialogTitle,
   DialogContent, DialogActions, Snackbar,
 } from '@mui/material';
-import { ArrowBack, CheckCircle, FileDownload, Search, Email, Assignment, Person, AccessTime, LocationOn, Send, WarningAmber } from '@mui/icons-material';
-import { getReportById, updateReportStatus, exportExcel, sendReportEmail, submitReport } from '../../services/reports.service';
+import { ArrowBack, CheckCircle, FileDownload, Search, Email, Assignment, Person, AccessTime, LocationOn, Send, WarningAmber, DeleteOutline } from '@mui/icons-material';
+import { getReportById, updateReportStatus, exportExcel, sendReportEmail, submitReport, deleteReport } from '../../services/reports.service';
 import { useAuth } from '../../context/AuthContext';
 import DetailHeader from '../../components/ui/DetailHeader';
 import StatsRow from '../../components/ui/StatsRow';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 
 const ESTADO_CHIP = {
   Borrador:  { label: 'Borrador',  color: 'default' },
@@ -280,6 +281,7 @@ export default function ReportDetailPage() {
   const [notice, setNotice] = useState('');
   const [noticeSeverity, setNoticeSeverity] = useState('success');
   const [submitOpen, setSubmitOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [siteSearch1, setSiteSearch1] = useState('');
   const [siteSearch2, setSiteSearch2] = useState('');
@@ -341,6 +343,16 @@ export default function ReportDetailPage() {
       setError(err.response?.data?.message || 'No se pudo enviar el reporte');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  /** The author discards a draft that was never sent, then goes back to the list. */
+  const handleDeleteDraft = async () => {
+    try {
+      await deleteReport(id);
+      navigate(backPath, { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo eliminar el borrador');
     }
   };
 
@@ -420,6 +432,8 @@ export default function ReportDetailPage() {
   const canSubmit = user?.rol === 'cleaner'
     && Number(report.user_id) === Number(user?.id)
     && ['Borrador', 'Devuelto'].includes(report.estado);
+  // Only a draft (never sent) can be deleted
+  const canDelete = canSubmit && report.estado === 'Borrador';
   // Only reports that were already sent can be re-emailed
   const canEmail = ['Enviado', 'Pagado'].includes(report.estado);
 
@@ -469,6 +483,11 @@ export default function ReportDetailPage() {
                 Enviar reporte
               </Button>
             )}
+            {canDelete && (
+              <Button variant="outlined" color="error" startIcon={<DeleteOutline />} onClick={() => setDeleteOpen(true)}>
+                Eliminar borrador
+              </Button>
+            )}
             {canChangeStatus && (
               <Button variant="contained" onClick={openStatusDialog}>
                 Cambiar estado
@@ -504,6 +523,14 @@ export default function ReportDetailPage() {
             : 'Este reporte es un borrador y todavía no se ha enviado. Revisa que los sitios y las horas estén correctos; cuando esté listo, pulsa "Enviar reporte".'}
         </Alert>
       )}
+
+      <ConfirmDialog
+        open={deleteOpen}
+        title="¿Eliminar este borrador?"
+        message="Se eliminará el borrador del reporte. Tus logs no se borran y podrás generar otro reporte cuando quieras. Esta acción no se puede deshacer."
+        onConfirm={handleDeleteDraft}
+        onClose={() => setDeleteOpen(false)}
+      />
 
       {/* Second confirmation before the report leaves */}
       <Dialog open={submitOpen} onClose={() => !submitting && setSubmitOpen(false)} maxWidth="xs" fullWidth>

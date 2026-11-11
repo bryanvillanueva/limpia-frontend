@@ -13,6 +13,8 @@ export const sendReportEmail = (id) => apiClient.post(`/reports/${id}/send-email
  * Returns { id, estado: 'Enviado', email: { sent, to | reason } }.
  */
 export const submitReport = (id) => apiClient.post(`/reports/${id}/submit`).then(r => r.data);
+/** Deletes a report that has not been sent (status 'Borrador'). Only its author can. */
+export const deleteReport = (id) => apiClient.delete(`/reports/${id}`).then(r => r.data);
 export const getMyReports = () => apiClient.get('/reports/my-reports').then(r => r.data);
 
 export const exportExcel = (id) =>
