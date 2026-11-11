@@ -107,7 +107,9 @@ export default function MyReportsPage() {
         loading={loading}
         emptyMessage="Aún no tienes reportes generados"
         mobileCardRender={(row) => {
-          const cfg = ESTADO_CHIP[row.estado] ?? { label: row.estado ?? 'Enviado', color: 'warning' };
+          // Same status/colors as the desktop table
+          const estado = row.estado || 'Enviado';
+          const cfg = { label: estado, color: ESTADO_COLORS[estado] || 'default' };
           return (
             <Stack spacing={1}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
