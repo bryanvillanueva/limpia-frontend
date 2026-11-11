@@ -1,11 +1,12 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Typography, IconButton, Alert, Button, Tooltip, Skeleton,
   ToggleButton, ToggleButtonGroup, Chip, alpha, Fab, useMediaQuery, useTheme,
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
-  Snackbar,
+  Snackbar, LinearProgress,
 } from '@mui/material';
+import { keyframes } from '@mui/material/styles';
 import {
   Add, ChevronLeft, ChevronRight, CalendarMonth, EventNote,
   ViewWeek, ViewDay, Share, Assessment,
@@ -47,13 +48,24 @@ function getMonday(date, offset = 0) {
   return d;
 }
 
+// Brief pulse on a log that was just created or edited, so the user sees where it landed
+const flashPulse = keyframes`
+  0%   { background-color: rgba(38, 97, 79, 0.35); box-shadow: 0 0 0 0 rgba(38, 97, 79, 0.5); }
+  100% { background-color: rgba(38, 97, 79, 0);    box-shadow: 0 0 0 10px rgba(38, 97, 79, 0); }
+`;
+
 /** Solid chip for a logged entry. */
-function LogChip({ log }) {
+function LogChip({ log, flash = false }) {
   const style = TYPE_STYLES[log.entry_type] || TYPE_STYLES.SERVICE;
   const value = Number(log.display_value || 0);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
+    <Box
+      sx={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25, borderRadius: 1,
+        ...(flash && { animation: `${flashPulse} 2s ease-out` }),
+      }}
+    >
       <Box
         sx={{
           display: 'inline-flex',
@@ -139,7 +151,12 @@ export default function MisSitiosPage() {
   const [plannerData, setPlannerData] = useState([]);
   const [teamSites, setTeamSites] = useState([]);
   const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // first load / week change: shows the skeleton
+  const [refreshing, setRefreshing] = useState(false); // background reload: table stays visible
+  const [flashIds, setFlashIds] = useState(() => new Set());
+  const loadSeq = useRef(0); // ignores responses of outdated requests
+  const knownLogs = useRef(new Map()); // log id -> signature, to detect new/edited logs
+  const flashTimer = useRef(null);
   const [error, setError] = useState('');
 
   // Modal state
@@ -244,31 +261,53 @@ export default function MisSitiosPage() {
     return () => { cancelled = true; };
   }, [team, cycleWeek]);
 
-  // Load logs for the current week
-  const loadLogs = useCallback(async () => {
-    setLoading(true);
+  /**
+   * Loads the logs of the displayed week.
+   * @param {{silent?: boolean}} [options] - silent: keep the table on screen (no skeleton, scroll untouched)
+   *   and highlight logs that are new or changed. Used after saving, editing, deleting or accepting a share.
+   */
+  const loadLogs = useCallback(async ({ silent = false } = {}) => {
+    const seq = ++loadSeq.current;
+    if (silent) setRefreshing(true); else setLoading(true);
     try {
       const allLogs = await getMyLogs();
+      if (seq !== loadSeq.current) return; // a newer request took over
       const startStr = formatDate(weekDates[0]);
       const endStr = formatDate(weekDates[6]);
       const weekLogs = (Array.isArray(allLogs) ? allLogs : []).filter(l => {
         const f = l.fecha?.slice(0, 10);
         return f >= startStr && f <= endStr;
       });
+
+      const signature = (l) => `${l.entry_type}|${l.display_value}|${l.observaciones || ''}|${l.fecha}`;
+      if (silent) {
+        const changed = weekLogs.filter(l => knownLogs.current.get(l.id) !== signature(l)).map(l => l.id);
+        if (changed.length > 0) {
+          setFlashIds(new Set(changed));
+          clearTimeout(flashTimer.current);
+          flashTimer.current = setTimeout(() => setFlashIds(new Set()), 2500);
+        }
+      }
+      knownLogs.current = new Map(weekLogs.map(l => [l.id, signature(l)]));
       setLogs(weekLogs);
     } catch {
-      setError('Error al cargar tus registros');
+      if (seq === loadSeq.current) setError('Error al cargar tus registros');
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [weekDates]);
 
   useEffect(() => { loadLogs(); }, [loadLogs]);
+  useEffect(() => () => clearTimeout(flashTimer.current), []);
 
   // Reload when logs change outside this page (e.g. accepting a shared week from the notifications bell)
   useEffect(() => {
-    window.addEventListener(LOGS_CHANGED_EVENT, loadLogs);
-    return () => window.removeEventListener(LOGS_CHANGED_EVENT, loadLogs);
+    const onChanged = () => loadLogs({ silent: true });
+    window.addEventListener(LOGS_CHANGED_EVENT, onChanged);
+    return () => window.removeEventListener(LOGS_CHANGED_EVENT, onChanged);
   }, [loadLogs]);
 
   // Build grid rows: merge planner sites + logged sites
@@ -402,7 +441,7 @@ export default function MisSitiosPage() {
   };
 
   const handleSaved = () => {
-    loadLogs();
+    loadLogs({ silent: true });
   };
 
   const isCurrentWeek = weekOffset === 0;
@@ -529,6 +568,11 @@ export default function MisSitiosPage() {
         </Typography>
       </Box>
 
+      {/* Background refresh indicator — fixed height so the layout never shifts */}
+      <Box sx={{ height: 3, mb: 1, borderRadius: 1, overflow: 'hidden' }}>
+        {refreshing && <LinearProgress sx={{ height: 3 }} />}
+      </Box>
+
       {/* Loading skeleton */}
       {loading ? (
         viewMode === 'day' ? (
@@ -615,7 +659,7 @@ export default function MisSitiosPage() {
                           sx={{ cursor: 'pointer', p: { xs: 0.5, md: 0 }, '&:hover': { opacity: 0.8 } }}
                           onClick={() => openEditModal(log, row)}
                         >
-                          <LogChip log={log} />
+                          <LogChip log={log} flash={flashIds.has(log.id)} />
                         </Box>
                       ))}
                     </Box>
@@ -760,7 +804,7 @@ export default function MisSitiosPage() {
                               sx={{ mb: 0.5, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
                               onClick={(e) => { e.stopPropagation(); openEditModal(log, row); }}
                             >
-                              <LogChip log={log} />
+                              <LogChip log={log} flash={flashIds.has(log.id)} />
                             </Box>
                           ))}
 
