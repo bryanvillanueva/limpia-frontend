@@ -26,6 +26,16 @@ export default function ReportsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Status label/color shared by the desktop table and the mobile cards
+  const estadoChip = (row) => {
+    const colors = { Borrador: 'default', Enviado: 'warning', Pagado: 'success', Devuelto: 'error', Eliminado: 'default' };
+    const estado = row.estado || 'Enviado';
+    return {
+      label: estado === 'Enviado' && isAccountant ? 'Pendiente' : estado,
+      color: colors[estado] || 'default',
+    };
+  };
+
   const buildTitle = (row) => {
     const nombre = [row.generado_por, row.generado_por_apellido].filter(Boolean).join(' ');
     const team = row.team_numero;
@@ -51,10 +61,8 @@ export default function ReportsPage() {
     {
       field: 'estado', label: 'Estado',
       render: row => {
-        const colors = { Borrador: 'default', Enviado: 'warning', Pagado: 'success', Devuelto: 'error', Eliminado: 'default' };
-        const estado = row.estado || 'Enviado';
-        const displayLabel = estado === 'Enviado' && isAccountant ? 'Pendiente' : estado;
-        return <Chip label={displayLabel} color={colors[estado] || 'default'} size="small" />;
+        const { label, color } = estadoChip(row);
+        return <Chip label={label} color={color} size="small" />;
       },
     },
     {
@@ -79,20 +87,17 @@ export default function ReportsPage() {
         rows={reports}
         loading={loading}
         emptyMessage="No hay reportes generados"
-        mobileCardRender={(row) => (
+        mobileCardRender={(row) => {
+          const chip = estadoChip(row);
+          return (
           <Stack spacing={1}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-              <Typography variant="body2" fontWeight={700}>Reporte #{row.id}</Typography>
-              <Chip label={row.aprobado ? 'Aprobado' : 'Pendiente'} color={row.aprobado ? 'success' : 'warning'} size="small" />
+            <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+              <Typography variant="body2" fontWeight={700}>{buildTitle(row)}</Typography>
+              <Chip label={chip.label} color={chip.color} size="small" sx={{ flexShrink: 0 }} />
             </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                Período: {new Date(row.fecha_inicio).toLocaleDateString()} — {new Date(row.fecha_fin).toLocaleDateString()}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Generado: {new Date(row.created_at).toLocaleDateString()}
-              </Typography>
-            </Box>
+            <Typography variant="caption" color="text.secondary">
+              Generado: {new Date(row.created_at).toLocaleDateString()}
+            </Typography>
             <Stack direction="row" justifyContent="flex-end">
               <Tooltip title="Ver reporte">
                 <IconButton size="small" onClick={() => navigate(`/reportes/${row.id}`)}>
@@ -101,7 +106,8 @@ export default function ReportsPage() {
               </Tooltip>
             </Stack>
           </Stack>
-        )}
+          );
+        }}
       />
       <GenerateReportModal open={modalOpen} onClose={() => setModalOpen(false)} onGenerated={load} />
     </>

@@ -112,13 +112,10 @@ export default function MyReportsPage() {
           const cfg = { label: estado, color: ESTADO_COLORS[estado] || 'default' };
           return (
             <Stack spacing={1}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                <Typography variant="body2" fontWeight={700}>Reporte #{row.id}</Typography>
-                <Chip label={cfg.label} color={cfg.color} size="small" />
+              <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
+                <Typography variant="body2" fontWeight={700}>{buildTitle(row)}</Typography>
+                <Chip label={cfg.label} color={cfg.color} size="small" sx={{ flexShrink: 0 }} />
               </Box>
-              <Typography variant="caption" color="text.secondary">
-                {new Date(row.fecha_inicio).toLocaleDateString()} — {new Date(row.fecha_fin).toLocaleDateString()}
-              </Typography>
               <Stack direction="row" justifyContent="flex-end">
                 <Tooltip title="Ver reporte">
                   <IconButton size="small" onClick={() => navigate(`/mis-reportes/${row.id}`)}>
