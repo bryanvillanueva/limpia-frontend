@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Box, Typography, Paper, Grid, alpha, Skeleton, Chip,
+  Box, Typography, Paper, Grid, alpha, Skeleton, Chip, ButtonBase,
   List, ListItem, ListItemIcon, ListItemText,
 } from '@mui/material';
 import {
   People, Groups, LocationOn, Inventory,
   ShoppingCart, BeachAccess, BarChart, Warning,
   Dashboard, AccessTime, CalendarMonth, Assignment,
-  CheckCircle, HourglassEmpty,
+  CheckCircle, HourglassEmpty, ChevronRight,
 } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -52,52 +52,78 @@ const QUICK_LINKS = {
   ],
 };
 
+/* ─── Section heading ─── */
+function SectionTitle({ children }) {
+  return (
+    <Typography
+      variant="subtitle2"
+      color="text.secondary"
+      sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.75rem' }}
+    >
+      {children}
+    </Typography>
+  );
+}
+
 /* ─── Stat Card ─── */
-function StatCard({ icon, label, value, subtitle, color = 'primary.main', onClick }) {
+/**
+ * @param {string}  tone      - Palette color key: primary | success | warning | error | info.
+ * @param {boolean} highlight - Tint the card with its tone (used for things that need attention).
+ */
+function StatCard({ icon, label, value, subtitle, tone = 'primary', highlight = false, onClick }) {
+  const content = (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', p: 2 }}>
+      <Box
+        sx={{
+          width: 48, height: 48, borderRadius: 2.5, flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          bgcolor: (t) => alpha(t.palette[tone].main, 0.12),
+          color: `${tone}.main`,
+        }}
+      >
+        {icon}
+      </Box>
+      <Box sx={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, lineHeight: 1.15 }}>
+          {value}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.3, mt: 0.25 }}>
+          {label}
+        </Typography>
+        {subtitle && (
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', textTransform: 'none', letterSpacing: 0 }}>
+            {subtitle}
+          </Typography>
+        )}
+      </Box>
+      {onClick && <ChevronRight fontSize="small" sx={{ color: 'text.disabled', flexShrink: 0 }} />}
+    </Box>
+  );
+
   return (
     <Paper
       elevation={0}
-      onClick={onClick}
       sx={{
-        p: 2.5,
+        height: '100%',
+        overflow: 'hidden',
         border: '1px solid',
-        borderColor: 'divider',
-        cursor: onClick ? 'pointer' : 'default',
-        transition: 'all 0.15s ease',
+        borderColor: (t) => (highlight ? alpha(t.palette[tone].main, 0.4) : t.palette.divider),
+        bgcolor: (t) => (highlight ? alpha(t.palette[tone].main, 0.05) : t.palette.background.paper),
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease',
         ...(onClick && {
           '&:hover': {
-            borderColor: color,
-            bgcolor: (t) => alpha(t.palette.primary.main, 0.03),
+            borderColor: `${tone}.main`,
+            boxShadow: (t) => `0 4px 14px ${alpha(t.palette[tone].main, 0.14)}`,
             transform: 'translateY(-1px)',
           },
         }),
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box
-          sx={{
-            width: 44, height: 44, borderRadius: 2,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            bgcolor: (t) => alpha(t.palette.primary.main, 0.08),
-            color,
-          }}
-        >
-          {icon}
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h5" fontWeight={700} sx={{ lineHeight: 1.2 }}>
-            {value}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" noWrap>
-            {label}
-          </Typography>
-        </Box>
-      </Box>
-      {subtitle && (
-        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-          {subtitle}
-        </Typography>
-      )}
+      {onClick ? (
+        <ButtonBase onClick={onClick} sx={{ display: 'flex', width: '100%', height: '100%', justifyContent: 'flex-start' }}>
+          {content}
+        </ButtonBase>
+      ) : content}
     </Paper>
   );
 }
@@ -107,13 +133,13 @@ function StatsSkeleton({ count = 4 }) {
   return (
     <Grid container spacing={2} sx={{ mb: 3 }}>
       {Array.from({ length: count }).map((_, i) => (
-        <Grid size={{ xs: 12, sm: 6, md: 3 }} key={i}>
-          <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              <Skeleton variant="rounded" width={44} height={44} />
+        <Grid size={{ xs: 6, md: 3 }} key={i}>
+          <Paper elevation={0} sx={{ p: 2, border: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Skeleton variant="rounded" width={48} height={48} />
               <Box sx={{ flex: 1 }}>
-                <Skeleton width={60} height={32} />
-                <Skeleton width={100} height={16} />
+                <Skeleton width={50} height={30} />
+                <Skeleton width="80%" height={16} />
               </Box>
             </Box>
           </Paper>
@@ -128,81 +154,112 @@ function AdminStats({ stats, navigate }) {
   const t = stats.totals || {};
   const reportsPending = stats.reports_by_status?.Enviado || 0;
   const ordersPending = stats.orders_by_status?.pending || 0;
+  const vacationsPending = stats.pending_vacations ?? 0;
+  const complaintsOpen = stats.open_complaints ?? 0;
 
   return (
-    <Grid container spacing={2} sx={{ mb: 3 }}>
-      <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-        <StatCard icon={<People />} label="Usuarios" value={t.users ?? 0} onClick={() => navigate('/usuarios')} />
+    <>
+      <SectionTitle>Resumen</SectionTitle>
+      <Grid container spacing={2} sx={{ mb: 3.5 }}>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard icon={<People />} label="Usuarios" value={t.users ?? 0} onClick={() => navigate('/usuarios')} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard icon={<Groups />} label="Equipos" value={t.teams ?? 0} onClick={() => navigate('/equipos')} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard icon={<LocationOn />} label="Sitios activos" value={t.active_sites ?? 0} onClick={() => navigate('/sitios')} />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard icon={<AccessTime />} label="Horas esta semana" value={stats.hours_this_week ?? 0} />
+        </Grid>
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-        <StatCard icon={<Groups />} label="Equipos" value={t.teams ?? 0} onClick={() => navigate('/equipos')} />
+
+      <SectionTitle>Requiere atención</SectionTitle>
+      <Grid container spacing={2} sx={{ mb: 3.5 }}>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            icon={<BarChart />}
+            label="Reportes pendientes"
+            value={reportsPending}
+            tone={reportsPending > 0 ? 'warning' : 'primary'}
+            highlight={reportsPending > 0}
+            onClick={() => navigate('/reportes')}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            icon={<ShoppingCart />}
+            label="Pedidos pendientes"
+            value={ordersPending}
+            tone={ordersPending > 0 ? 'warning' : 'primary'}
+            highlight={ordersPending > 0}
+            onClick={() => navigate('/pedidos')}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            icon={<BeachAccess />}
+            label="Vacaciones pendientes"
+            value={vacationsPending}
+            tone={vacationsPending > 0 ? 'info' : 'primary'}
+            highlight={vacationsPending > 0}
+            onClick={() => navigate('/vacaciones')}
+          />
+        </Grid>
+        <Grid size={{ xs: 6, md: 3 }}>
+          <StatCard
+            icon={<Warning />}
+            label="Quejas abiertas"
+            value={complaintsOpen}
+            tone={complaintsOpen > 0 ? 'error' : 'primary'}
+            highlight={complaintsOpen > 0}
+            onClick={() => navigate('/quejas')}
+          />
+        </Grid>
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-        <StatCard icon={<LocationOn />} label="Sitios activos" value={t.active_sites ?? 0} onClick={() => navigate('/sitios')} />
-      </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-        <StatCard icon={<AccessTime />} label="Horas esta semana" value={stats.hours_this_week ?? 0} />
-      </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-        <StatCard
-          icon={<BarChart />}
-          label="Reportes pendientes"
-          value={reportsPending}
-          onClick={() => navigate('/reportes')}
-        />
-      </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-        <StatCard
-          icon={<ShoppingCart />}
-          label="Pedidos pendientes"
-          value={ordersPending}
-          onClick={() => navigate('/pedidos')}
-        />
-      </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-        <StatCard
-          icon={<BeachAccess />}
-          label="Vacaciones pendientes"
-          value={stats.pending_vacations ?? 0}
-          onClick={() => navigate('/vacaciones')}
-        />
-      </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 2 }}>
-        <StatCard
-          icon={<Warning />}
-          label="Quejas abiertas"
-          value={stats.open_complaints ?? 0}
-          onClick={() => navigate('/quejas')}
-        />
-      </Grid>
-    </Grid>
+    </>
   );
 }
 
 /* ─── Manager Stats ─── */
 function ManagerStats({ stats, navigate }) {
   return (
-    <Grid container spacing={2} sx={{ mb: 3 }}>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+    <Grid container spacing={2} sx={{ mb: 3.5 }}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <StatCard icon={<Groups />} label="Mis equipos" value={stats.my_teams_count ?? 0} onClick={() => navigate('/equipos')} />
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <StatCard icon={<People />} label="Miembros" value={stats.team_members_count ?? 0} />
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <StatCard icon={<LocationOn />} label="Sitios asignados" value={stats.team_sites_count ?? 0} onClick={() => navigate('/sitios')} />
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <StatCard icon={<AccessTime />} label="Horas esta semana" value={stats.hours_this_week ?? 0} />
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <StatCard icon={<Dashboard />} label="Logs esta semana" value={stats.logs_this_week ?? 0} />
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-        <StatCard icon={<ShoppingCart />} label="Pedidos pendientes" value={stats.pending_orders ?? 0} onClick={() => navigate('/pedidos')} />
+      <Grid size={{ xs: 6, md: 3 }}>
+        <StatCard
+          icon={<ShoppingCart />}
+          label="Pedidos pendientes"
+          value={stats.pending_orders ?? 0}
+          tone={(stats.pending_orders ?? 0) > 0 ? 'warning' : 'primary'}
+          highlight={(stats.pending_orders ?? 0) > 0}
+          onClick={() => navigate('/pedidos')}
+        />
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
-        <StatCard icon={<BeachAccess />} label="Vacaciones pendientes" value={stats.pending_vacations ?? 0} onClick={() => navigate('/vacaciones')} />
+      <Grid size={{ xs: 6, md: 3 }}>
+        <StatCard
+          icon={<BeachAccess />}
+          label="Vacaciones pendientes"
+          value={stats.pending_vacations ?? 0}
+          tone={(stats.pending_vacations ?? 0) > 0 ? 'info' : 'primary'}
+          highlight={(stats.pending_vacations ?? 0) > 0}
+          onClick={() => navigate('/vacaciones')}
+        />
       </Grid>
     </Grid>
   );
@@ -213,15 +270,15 @@ function AccountantStats({ stats, navigate }) {
   const reports = stats.reports_by_status || {};
 
   const reportCards = [
-    { key: 'Enviado',   label: 'Pendientes',  color: 'warning.main',  icon: <HourglassEmpty /> },
-    { key: 'Pagado',    label: 'Pagados',     color: 'success.main',  icon: <CheckCircle /> },
-    { key: 'Devuelto',  label: 'Devueltos',   color: 'error.main',    icon: <Warning /> },
-    { key: 'Borrador',  label: 'Borradores',  color: 'text.secondary', icon: <BarChart /> },
+    { key: 'Enviado',   label: 'Pendientes',  tone: 'warning', icon: <HourglassEmpty /> },
+    { key: 'Pagado',    label: 'Pagados',     tone: 'success', icon: <CheckCircle /> },
+    { key: 'Devuelto',  label: 'Devueltos',   tone: 'error',   icon: <Warning /> },
+    { key: 'Borrador',  label: 'Borradores',  tone: 'primary', icon: <BarChart /> },
   ];
 
   return (
-    <Grid container spacing={2} sx={{ mb: 3 }}>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+    <Grid container spacing={2} sx={{ mb: 3.5 }}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <StatCard
           icon={<ShoppingCart />}
           label="Pedidos pendientes"
@@ -229,7 +286,7 @@ function AccountantStats({ stats, navigate }) {
           onClick={() => navigate('/pedidos')}
         />
       </Grid>
-      <Grid size={{ xs: 6, sm: 4, md: 3 }}>
+      <Grid size={{ xs: 6, md: 3 }}>
         <StatCard
           icon={<LocationOn />}
           label="Sitios activos"
@@ -237,13 +294,13 @@ function AccountantStats({ stats, navigate }) {
           onClick={() => navigate('/sitios')}
         />
       </Grid>
-      {reportCards.map(({ key, label, color, icon }) => (
-        <Grid size={{ xs: 6, sm: 4, md: 3 }} key={key}>
+      {reportCards.map(({ key, label, tone, icon }) => (
+        <Grid size={{ xs: 6, md: 3 }} key={key}>
           <StatCard
             icon={icon}
-            label={`Reportes ${label}`}
+            label={`Reportes ${label.toLowerCase()}`}
             value={reports[key] ?? 0}
-            color={color}
+            tone={tone}
             onClick={() => navigate('/reportes')}
           />
         </Grid>
@@ -258,10 +315,10 @@ function CleanerStats({ stats, navigate }) {
   const vacation = stats.vacation_status || {};
 
   return (
-    <Grid container spacing={2} sx={{ mb: 3 }}>
+    <Grid container spacing={2} sx={{ mb: 3.5 }}>
       {/* Sites today — prominent card */}
       <Grid size={{ xs: 12, md: 6 }}>
-        <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider' }}>
+        <Paper elevation={0} sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', height: '100%' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
             <CalendarMonth color="primary" fontSize="small" />
             <Typography variant="subtitle2" fontWeight={700}>
@@ -334,6 +391,46 @@ function CleanerStats({ stats, navigate }) {
   );
 }
 
+/* ─── Quick link tile ─── */
+function QuickLink({ link, onClick }) {
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        overflow: 'hidden',
+        border: '1px solid',
+        borderColor: 'divider',
+        transition: 'border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease',
+        '&:hover': {
+          borderColor: 'primary.main',
+          boxShadow: (t) => `0 4px 14px ${alpha(t.palette.primary.main, 0.14)}`,
+          transform: 'translateY(-1px)',
+        },
+      }}
+    >
+      <ButtonBase
+        onClick={onClick}
+        sx={{ display: 'flex', width: '100%', justifyContent: 'flex-start', gap: 1.5, p: 1.5, textAlign: 'left' }}
+      >
+        <Box
+          sx={{
+            width: 40, height: 40, borderRadius: 2, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            bgcolor: (t) => alpha(t.palette.primary.main, 0.1),
+            color: 'primary.main',
+          }}
+        >
+          {link.icon}
+        </Box>
+        <Typography variant="body2" fontWeight={600} noWrap sx={{ flex: 1, minWidth: 0 }}>
+          {link.label}
+        </Typography>
+        <ChevronRight fontSize="small" sx={{ color: 'text.disabled', flexShrink: 0, display: { xs: 'none', sm: 'block' } }} />
+      </ButtonBase>
+    </Paper>
+  );
+}
+
 /* ─── Main Dashboard ─── */
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -357,6 +454,8 @@ export default function DashboardPage() {
 
   const links = QUICK_LINKS[user?.rol] || [];
   const greeting = getGreeting();
+  const today = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const todayLabel = today.charAt(0).toUpperCase() + today.slice(1);
 
   const StatsComponent = {
     admin: AdminStats,
@@ -371,21 +470,38 @@ export default function DashboardPage() {
       <Paper
         elevation={0}
         sx={{
-          p: { xs: 2, md: 3 }, mb: 3,
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.06),
-          border: '1px solid',
-          borderColor: (theme) => alpha(theme.palette.primary.main, 0.12),
+          position: 'relative',
+          overflow: 'hidden',
+          p: { xs: 2.5, md: 3.5 }, mb: 3.5,
+          color: 'primary.contrastText',
+          background: (t) => `linear-gradient(135deg, ${t.palette.primary.dark} 0%, ${t.palette.primary.main} 100%)`,
+          border: 'none',
+          // Soft decorative circles
+          '&::before, &::after': {
+            content: '""', position: 'absolute', borderRadius: '50%',
+            bgcolor: 'rgba(255,255,255,0.07)', pointerEvents: 'none',
+          },
+          '&::before': { width: 220, height: 220, top: -90, right: -50 },
+          '&::after': { width: 140, height: 140, bottom: -70, right: 120 },
         }}
       >
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" sx={{ opacity: 0.85 }}>
           {greeting}
         </Typography>
-        <Typography variant="h5" sx={{ mt: 0.25, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+        <Typography variant="h4" sx={{ mt: 0.25, fontSize: { xs: '1.5rem', sm: '2rem' }, fontWeight: 800 }}>
           {user?.nombre}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-          {ROLE_LABELS[user?.rol]} &middot; {new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap', mt: 1.5 }}>
+          <Chip
+            label={ROLE_LABELS[user?.rol]}
+            size="small"
+            sx={{ bgcolor: 'rgba(255,255,255,0.18)', color: 'inherit', fontWeight: 600 }}
+          />
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, opacity: 0.9 }}>
+            <CalendarMonth sx={{ fontSize: 18 }} />
+            <Typography variant="body2">{todayLabel}</Typography>
+          </Box>
+        </Box>
       </Paper>
 
       {/* Stats cards */}
@@ -396,29 +512,11 @@ export default function DashboardPage() {
       )}
 
       {/* Quick links */}
-      <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 1.5 }}>
-        Accesos rápidos
-      </Typography>
+      <SectionTitle>Accesos rápidos</SectionTitle>
       <Grid container spacing={2}>
         {links.map(link => (
           <Grid size={{ xs: 6, sm: 4, md: 3 }} key={link.path}>
-            <Paper
-              elevation={0}
-              onClick={() => navigate(link.path)}
-              sx={{
-                p: { xs: 1.5, sm: 2.5 }, textAlign: 'center', cursor: 'pointer',
-                border: '1px solid', borderColor: 'divider',
-                transition: 'all 0.15s ease',
-                '&:hover': {
-                  borderColor: 'primary.main',
-                  bgcolor: (theme) => alpha(theme.palette.primary.main, 0.03),
-                  transform: 'translateY(-1px)',
-                },
-              }}
-            >
-              <Box sx={{ color: 'primary.main', mb: 1 }}>{link.icon}</Box>
-              <Typography variant="body2" fontWeight={600}>{link.label}</Typography>
-            </Paper>
+            <QuickLink link={link} onClick={() => navigate(link.path)} />
           </Grid>
         ))}
       </Grid>

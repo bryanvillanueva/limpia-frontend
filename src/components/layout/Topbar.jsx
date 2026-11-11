@@ -10,7 +10,7 @@ import NotificationBell from './NotificationBell';
 const DRAWER_WIDTH = 260;
 
 const ROLE_LABELS = {
-  admin: 'Admin',
+  admin: 'Administrador',
   manager: 'Manager',
   accountant: 'Contador',
   cleaner: 'Limpiador',
