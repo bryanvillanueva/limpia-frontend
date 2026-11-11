@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   IconButton, Badge, Popover, Box, Typography, Button, Divider, CircularProgress,
   Snackbar, Alert, alpha,
 } from '@mui/material';
 import {
-  Notifications, NotificationsNone, Share, CheckCircleOutline, HighlightOff, DoneAll,
+  Notifications, NotificationsNone, Share, CheckCircleOutline, HighlightOff, DoneAll, Assignment,
 } from '@mui/icons-material';
 import {
   getUnreadCount, getNotifications, markNotificationRead, markAllNotificationsRead,
@@ -20,6 +21,12 @@ const TYPE_ICON = {
   log_share_request: <Share fontSize="small" />,
   log_share_accepted: <CheckCircleOutline fontSize="small" />,
   log_share_rejected: <HighlightOff fontSize="small" />,
+  report_submitted: <Assignment fontSize="small" />,
+};
+
+// Notifications that open a page when tapped
+const NOTIFICATION_LINK = {
+  report_submitted: (n) => `/reportes/${n.ref_id}`,
 };
 
 const SHARE_STATUS_LABEL = {
@@ -47,6 +54,7 @@ function timeAgo(iso) {
  * can be accepted or rejected right from the notification.
  */
 export default function NotificationBell() {
+  const navigate = useNavigate();
   const [unread, setUnread] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
   const [items, setItems] = useState([]);
@@ -101,6 +109,11 @@ export default function NotificationBell() {
   };
 
   const handleItemClick = async (n) => {
+    const link = NOTIFICATION_LINK[n.type]?.(n);
+    if (link) {
+      setAnchorEl(null);
+      navigate(link);
+    }
     if (n.read_at) return;
     setItems(prev => prev.map(x => (x.id === n.id ? { ...x, read_at: new Date().toISOString() } : x)));
     setUnread(u => Math.max(0, u - 1));
@@ -209,7 +222,7 @@ export default function NotificationBell() {
                     onClick={() => handleItemClick(n)}
                     sx={{
                       display: 'flex', gap: 1.5, px: 2, py: 1.5,
-                      cursor: isUnread ? 'pointer' : 'default',
+                      cursor: isUnread || NOTIFICATION_LINK[n.type] ? 'pointer' : 'default',
                       bgcolor: (t) => (isUnread ? alpha(t.palette.primary.main, 0.06) : 'transparent'),
                     }}
                   >
