@@ -23,7 +23,8 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
     setEstado('Enviado');
     setError('');
     getPeriodLogs({ billing_period_id: billingPeriodId })
-      .then(setLogs)
+      // The endpoint returns { billing_period_id, fecha_inicio, fecha_fin, logs: [...] } (older versions returned the bare array)
+      .then((data) => setLogs(Array.isArray(data) ? data : (data?.logs ?? [])))
       .catch(() => setError('Error al cargar los logs del periodo'))
       .finally(() => setLoading(false));
   }, [open, billingPeriodId]);
@@ -103,7 +104,7 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
                 >
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body2" fontWeight={600} noWrap>
-                      {log.site_name || log.site_id}
+                      {log.sitio || log.site_name || log.site_id}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
                       <Typography variant="caption" color="text.secondary">
