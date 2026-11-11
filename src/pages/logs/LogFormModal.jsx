@@ -245,6 +245,7 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
         {/* Site picker — only when no site pre-selected and creating */}
         {pickingSite && siteMode === 'pick' && (
           <Autocomplete
+            openOnFocus
             value={selectedSite}
             inputValue={siteInput}
             onInputChange={(_, v) => setSiteInput(v)}
@@ -374,9 +375,11 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
             size="small"
             fullWidth
           >
-            <ToggleButton value="SERVICE" disabled={isUnassigned} sx={{ textTransform: 'none', fontWeight: 600 }}>Service</ToggleButton>
+            <ToggleButton value="SERVICE" disabled={isUnassigned} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              Service{isUnassigned ? ' (N/A)' : ''}
+            </ToggleButton>
             <ToggleButton value="BINS" disabled={isUnassigned || !canBins} sx={{ textTransform: 'none', fontWeight: 600 }}>
-              Bins{!canBins && effectiveSite && !isUnassigned ? ' (N/A)' : ''}
+              Bins{(!canBins || isUnassigned) && effectiveSite ? ' (N/A)' : ''}
             </ToggleButton>
             <ToggleButton value="CUSTOM" sx={{ textTransform: 'none', fontWeight: 600 }}>Otro</ToggleButton>
           </ToggleButtonGroup>
