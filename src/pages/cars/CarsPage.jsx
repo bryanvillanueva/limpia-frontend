@@ -9,13 +9,14 @@ import {
   Button, IconButton, Tooltip, Alert, Typography, Paper, TextField,
   InputAdornment, MenuItem, Box, Chip, Stack,
 } from '@mui/material';
-import { Add, Edit, Visibility, Search, DirectionsCar } from '@mui/icons-material';
+import { Add, Edit, Visibility, Search, DirectionsCar, Build, EventBusy } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import CarFormModal from './CarFormModal';
 import { getCars } from '../../services/cars.service';
 import { useAuth } from '../../context/AuthContext';
+import StatsRow from '../../components/ui/StatsRow';
 
 /**
  * Formats an ISO / date string to a short localised date (dd MMM yyyy).
@@ -151,6 +152,12 @@ export default function CarsPage() {
     },
   ];
 
+  // Days until a date (negative = already past); null when there is no date
+  const daysUntil = (d) => (d ? Math.ceil((new Date(d) - new Date()) / 86400000) : null);
+  const soon = (d) => { const n = daysUntil(d); return n !== null && n <= 30; };
+  const maintenanceDue = cars.filter(c => soon(c.proximo_mantenimiento_fecha)).length;
+  const regoDue = cars.filter(c => soon(c.fecha_rego)).length;
+
   return (
     <>
       <PageHeader
@@ -170,6 +177,15 @@ export default function CarsPage() {
       />
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <StatsRow
+        loading={loading}
+        items={[
+          { icon: <DirectionsCar />, label: 'Total de vehículos', value: cars.length },
+          { icon: <Build />, label: 'Mantenimiento en 30 días o vencido', value: maintenanceDue, tone: maintenanceDue > 0 ? 'warning' : 'primary', highlight: maintenanceDue > 0 },
+          { icon: <EventBusy />, label: 'Rego en 30 días o vencido', value: regoDue, tone: regoDue > 0 ? 'error' : 'primary', highlight: regoDue > 0 },
+        ]}
+      />
 
       {/* Search & filter bar */}
       <Paper

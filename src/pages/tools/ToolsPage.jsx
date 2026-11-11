@@ -6,7 +6,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { Button, IconButton, Tooltip, Alert, Box, Typography, Chip, Stack } from '@mui/material';
-import { Add, Edit, Delete, Upload, CheckCircle, Cancel } from '@mui/icons-material';
+import { Add, Edit, Delete, Upload, CheckCircle, Cancel, Build, Business, AssignmentInd, Engineering } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -15,6 +15,7 @@ import ToolFormModal from './ToolFormModal';
 import ToolImportModal from './ToolImportModal';
 import { getTools, deleteTool } from '../../services/tools.service';
 import { useAuth } from '../../context/AuthContext';
+import StatsRow from '../../components/ui/StatsRow';
 
 /**
  * Formats a numeric value as AUD currency.
@@ -112,6 +113,10 @@ export default function ToolsPage() {
     }] : []),
   ];
 
+  const inOffice = tools.filter(t => (t.ubicacion || 'oficina') === 'oficina').length;
+  const assigned = tools.filter(t => t.ubicacion === 'asignada').length;
+  const needMaintenance = tools.filter(t => Number(t.requiere_mantenimiento) === 1).length;
+
   return (
     <>
       <PageHeader
@@ -128,6 +133,16 @@ export default function ToolsPage() {
         )}
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <StatsRow
+        loading={loading}
+        items={[
+          { icon: <Build />, label: 'Total de herramientas', value: tools.length },
+          { icon: <Business />, label: 'En oficina', value: inOffice, tone: 'info' },
+          { icon: <AssignmentInd />, label: 'Asignadas', value: assigned, tone: 'success' },
+          { icon: <Engineering />, label: 'Requieren mantenimiento', value: needMaintenance, tone: needMaintenance > 0 ? 'warning' : 'primary', highlight: needMaintenance > 0 },
+        ]}
+      />
       <DataTable
         columns={columns}
         rows={tools}

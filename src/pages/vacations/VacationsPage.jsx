@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button, IconButton, Tooltip, Alert, TextField, Box, Stack, Typography } from '@mui/material';
-import { Add, Check, Close } from '@mui/icons-material';
+import { Add, Check, Close, HourglassEmpty, CheckCircle, Cancel } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -8,6 +8,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import VacationRequestModal from './VacationRequestModal';
 import { getAllVacations, getMyVacations, approveVacation, rejectVacation } from '../../services/vacations.service';
 import { useAuth } from '../../context/AuthContext';
+import StatsRow from '../../components/ui/StatsRow';
 
 export default function VacationsPage({ mode = 'admin' }) {
   const { user } = useAuth();
@@ -67,6 +68,9 @@ export default function VacationsPage({ mode = 'admin' }) {
     }] : []),
   ];
 
+  const countBy = (estado) => vacations.filter(v => v.estado === estado).length;
+  const pendingVacations = countBy('pendiente');
+
   return (
     <>
       <PageHeader
@@ -78,6 +82,15 @@ export default function VacationsPage({ mode = 'admin' }) {
         )}
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <StatsRow
+        loading={loading}
+        items={[
+          { icon: <HourglassEmpty />, label: 'Pendientes', value: pendingVacations, tone: pendingVacations > 0 ? 'info' : 'primary', highlight: pendingVacations > 0 },
+          { icon: <CheckCircle />, label: 'Aprobadas', value: countBy('aprobado'), tone: 'success' },
+          { icon: <Cancel />, label: 'Rechazadas', value: countBy('rechazado'), tone: 'secondary' },
+        ]}
+      />
       <DataTable
         columns={columns}
         rows={vacations}

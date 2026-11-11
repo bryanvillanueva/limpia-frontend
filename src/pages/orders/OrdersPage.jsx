@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button, IconButton, Tooltip, Alert, Box, Stack, Typography } from '@mui/material';
-import { Visibility, Add } from '@mui/icons-material';
+import { Visibility, Add, ShoppingCart, HourglassEmpty, ThumbUpAlt, CheckCircle } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import StatusBadge from '../../components/ui/StatusBadge';
 import OrderDetailModal from './OrderDetailModal';
 import { getOrders } from '../../services/orders.service';
+import StatsRow from '../../components/ui/StatsRow';
 
 /**
  * Admin/manager list of all supply orders with approval/rejection workflow.
@@ -52,6 +53,9 @@ export default function OrdersPage() {
     },
   ];
 
+  const countBy = (estado) => orders.filter(o => o.estado === estado).length;
+  const pendingOrders = countBy('pendiente');
+
   return (
     <>
       <PageHeader
@@ -67,6 +71,16 @@ export default function OrdersPage() {
         }
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <StatsRow
+        loading={loading}
+        items={[
+          { icon: <ShoppingCart />, label: 'Total de pedidos', value: orders.length },
+          { icon: <HourglassEmpty />, label: 'Pendientes', value: pendingOrders, tone: pendingOrders > 0 ? 'warning' : 'primary', highlight: pendingOrders > 0 },
+          { icon: <ThumbUpAlt />, label: 'Aprobados', value: countBy('aprobado'), tone: 'info' },
+          { icon: <CheckCircle />, label: 'Completados', value: countBy('completado'), tone: 'success' },
+        ]}
+      />
       <DataTable
         columns={columns}
         rows={orders}

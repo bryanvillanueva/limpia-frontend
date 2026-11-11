@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Button, IconButton, Tooltip, Alert, Box, Stack, Typography } from '@mui/material';
-import { Add, Edit } from '@mui/icons-material';
+import { Add, Edit, Warning, HourglassEmpty, CheckCircle } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -8,6 +8,7 @@ import ComplaintFormModal from './ComplaintFormModal';
 import { getComplaints } from '../../services/complaints.service';
 import { getSites } from '../../services/sites.service';
 import { useAuth } from '../../context/AuthContext';
+import StatsRow from '../../components/ui/StatsRow';
 
 export default function ComplaintsPage() {
   const { user } = useAuth();
@@ -50,6 +51,9 @@ export default function ComplaintsPage() {
     },
   ];
 
+  const pendingComplaints = complaints.filter(c => c.estado === 'pendiente').length;
+  const resolvedComplaints = complaints.filter(c => c.estado === 'resuelto').length;
+
   return (
     <>
       <PageHeader
@@ -61,6 +65,15 @@ export default function ComplaintsPage() {
         }
       />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+      <StatsRow
+        loading={loading}
+        items={[
+          { icon: <Warning />, label: 'Total de quejas', value: complaints.length },
+          { icon: <HourglassEmpty />, label: 'Pendientes', value: pendingComplaints, tone: pendingComplaints > 0 ? 'error' : 'primary', highlight: pendingComplaints > 0 },
+          { icon: <CheckCircle />, label: 'Resueltas', value: resolvedComplaints, tone: 'success' },
+        ]}
+      />
       <DataTable
         columns={columns}
         rows={complaints}

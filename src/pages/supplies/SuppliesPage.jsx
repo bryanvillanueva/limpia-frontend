@@ -3,13 +3,14 @@ import {
   Button, IconButton, Tooltip, Alert, Box, LinearProgress, Typography,
   Avatar, TextField, InputAdornment, Stack,
 } from '@mui/material';
-import { Add, Edit, Inventory2, Search, Close } from '@mui/icons-material';
+import { Add, Edit, Inventory2, Search, Close, Warning, RemoveShoppingCart } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import ImagePreviewDialog from '../../components/ui/ImagePreviewDialog';
 import SupplyFormModal from './SupplyFormModal';
 import { getSupplies } from '../../services/supplies.service';
 import { useAuth } from '../../context/AuthContext';
+import StatsRow from '../../components/ui/StatsRow';
 
 /**
  * Visual stock indicator with progress bar.
@@ -127,6 +128,9 @@ export default function SuppliesPage() {
     }] : []),
   ];
 
+  const lowStock = supplies.filter(s => s.stock_minimo != null && s.stock_minimo > 0 && (s.stock_actual ?? 0) <= s.stock_minimo).length;
+  const outOfStock = supplies.filter(s => (s.stock_actual ?? 0) === 0).length;
+
   return (
     <>
       <PageHeader
@@ -176,6 +180,15 @@ export default function SuppliesPage() {
       </Box>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+
+      <StatsRow
+        loading={loading}
+        items={[
+          { icon: <Inventory2 />, label: 'Total de insumos', value: supplies.length },
+          { icon: <Warning />, label: 'Stock bajo', value: lowStock, tone: lowStock > 0 ? 'warning' : 'primary', highlight: lowStock > 0 },
+          { icon: <RemoveShoppingCart />, label: 'Sin stock', value: outOfStock, tone: outOfStock > 0 ? 'error' : 'primary', highlight: outOfStock > 0 },
+        ]}
+      />
 
       <DataTable
         columns={columns}

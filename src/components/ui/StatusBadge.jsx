@@ -7,6 +7,7 @@ const STATUS_MAP = {
   pendiente:     { label: 'Pendiente',     tone: 'warning' },
   aprobado:      { label: 'Aprobado',      tone: 'success' },
   rechazado:     { label: 'Rechazado',     tone: 'error' },
+  resuelto:      { label: 'Resuelto',      tone: 'success' },
   completado:    { label: 'Completado',    tone: 'info' },
   abierto:       { label: 'Abierto',       tone: 'error' },
   en_proceso:    { label: 'En proceso',    tone: 'warning' },
