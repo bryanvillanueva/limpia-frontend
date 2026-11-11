@@ -14,6 +14,8 @@ import { getCycleWeek } from '../../utils/cycle';
 import {
   getMyTeam, getWeekPlan, getTeamSites, createItem, updatePlan, updateItem, deleteItem,
 } from '../../services/planner.service';
+import NoTeamState from '../../components/ui/NoTeamState';
+import { isNoTeamError } from '../../utils/team';
 
 const CYCLE_WEEKS = [1, 2, 3, 4];
 const CURRENT_CYCLE_WEEK = getCycleWeek(new Date());
@@ -39,6 +41,7 @@ export default function PlannerPage() {
   const [teams, setTeams] = useState([]);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [teamsLoading, setTeamsLoading] = useState(true);
+  const [noTeam, setNoTeam] = useState(false); // a cleaner who is not in a team yet
 
   /* ── Week & grid state ── */
   const [cycleWeek, setCycleWeek] = useState(CURRENT_CYCLE_WEEK);
@@ -86,8 +89,9 @@ export default function PlannerPage() {
           if (cancelled) return;
           setSelectedTeam({ id: myTeam.team_id, numero: myTeam.team_numero ?? String(myTeam.team_id) });
         }
-      } catch {
-        setError(canSelectTeam ? 'Error al cargar equipos' : 'Error al detectar tu equipo');
+      } catch (err) {
+        if (!canSelectTeam && isNoTeamError(err)) setNoTeam(true);
+        else setError(canSelectTeam ? 'Error al cargar equipos' : 'Error al detectar tu equipo');
       } finally {
         if (!cancelled) setTeamsLoading(false);
       }
@@ -224,6 +228,15 @@ export default function PlannerPage() {
       setError('Error al actualizar color');
     }
   };
+
+  if (noTeam) {
+    return (
+      <>
+        <PageHeader title="Planner" subtitle="Sin equipo asignado" />
+        <NoTeamState />
+      </>
+    );
+  }
 
   return (
     <>

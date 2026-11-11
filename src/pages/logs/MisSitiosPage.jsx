@@ -20,6 +20,8 @@ import ShareLogsDialog from './ShareLogsDialog';
 import { LOGS_CHANGED_EVENT } from '../../components/layout/NotificationBell';
 import { getMyTeam, getWeekPlan, getTeamSites } from '../../services/planner.service';
 import { getCycleWeek } from '../../utils/cycle';
+import NoTeamState from '../../components/ui/NoTeamState';
+import { isNoTeamError } from '../../utils/team';
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const CYCLE_WEEKS = [1, 2, 3, 4];
@@ -140,6 +142,7 @@ export default function MisSitiosPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
   const [team, setTeam] = useState(null);
+  const [noTeam, setNoTeam] = useState(false); // the cleaner is not in a team yet (not an error)
   const [weekOffset, setWeekOffset] = useState(0);
   // Manual override of the planner guide week; null = follow the displayed week automatically
   const [cycleOverride, setCycleOverride] = useState(null);
@@ -238,7 +241,10 @@ export default function MisSitiosPage() {
     let cancelled = false;
     getMyTeam()
       .then(t => { if (!cancelled) setTeam(t); })
-      .catch(() => setError('Error al detectar tu equipo'));
+      .catch((err) => {
+        if (isNoTeamError(err)) setNoTeam(true);
+        else setError('Error al detectar tu equipo');
+      });
     return () => { cancelled = true; };
   }, []);
 
@@ -445,6 +451,16 @@ export default function MisSitiosPage() {
   };
 
   const isCurrentWeek = weekOffset === 0;
+
+  // Without a team there is nothing to register: explain it instead of showing an error
+  if (noTeam) {
+    return (
+      <>
+        <PageHeader title="Registrar Logs" subtitle="Sin equipo asignado" />
+        <NoTeamState />
+      </>
+    );
+  }
 
   return (
     <>

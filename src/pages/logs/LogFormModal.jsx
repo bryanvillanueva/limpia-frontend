@@ -85,6 +85,7 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
       setSiteMode('pick');
       setSiteInput('');
       setRemoteSites([]);
+      setSearching(false);
       setNewAddress('');
       setNewSuburb('');
     }
@@ -108,7 +109,8 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
         if (!cancelled) setSearching(false);
       }
     }, 300);
-    return () => { cancelled = true; clearTimeout(timer); };
+    // A cancelled search never reaches its finally block, so the spinner is reset here
+    return () => { cancelled = true; clearTimeout(timer); setSearching(false); };
   }, [siteInput, open, pickingSite, siteMode]);
 
   const assignedIds = useMemo(() => new Set((teamSites || []).map((s) => s.site_id ?? s.id)), [teamSites]);

@@ -8,6 +8,8 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import OrderDetailModal from './OrderDetailModal';
 import { getMyOrders } from '../../services/orders.service';
 import StatsRow from '../../components/ui/StatsRow';
+import NoTeamState from '../../components/ui/NoTeamState';
+import { isNoTeamError } from '../../utils/team';
 
 /**
  * Cleaner view of their team's supply orders.
@@ -20,11 +22,15 @@ export default function MyOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [noTeam, setNoTeam] = useState(false); // the cleaner is not in a team yet (not an error)
 
   const load = useCallback(async () => {
     setLoading(true);
     try { setOrders(await getMyOrders()); }
-    catch { setError('Error al cargar pedidos'); }
+    catch (err) {
+      if (isNoTeamError(err)) setNoTeam(true);
+      else setError('Error al cargar pedidos');
+    }
     finally { setLoading(false); }
   }, []);
 
@@ -57,6 +63,15 @@ export default function MyOrdersPage() {
 
   const countBy = (estado) => orders.filter(o => o.estado === estado).length;
   const pendingOrders = countBy('pendiente');
+
+  if (noTeam) {
+    return (
+      <>
+        <PageHeader title="Mis Pedidos" subtitle="Sin equipo asignado" />
+        <NoTeamState />
+      </>
+    );
+  }
 
   return (
     <>
