@@ -4,10 +4,11 @@ import {
   Paper, Typography, IconButton, Alert, Button, Tooltip, Skeleton,
   ToggleButton, ToggleButtonGroup, Chip, alpha, Fab, useMediaQuery, useTheme,
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
+  List, ListItemButton, ListItemText, Snackbar,
 } from '@mui/material';
 import {
   Add, ChevronLeft, ChevronRight, CalendarMonth, EventNote,
-  ViewWeek, ViewDay, PeopleAlt, Assessment,
+  ViewWeek, ViewDay, Sync, Assessment,
 } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
@@ -150,11 +151,10 @@ export default function MisSitiosPage() {
   // Generate report modal
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
-  // Import from teammate state
-  const [importPreview, setImportPreview] = useState(null); // dry_run result
-  const [importLoading, setImportLoading] = useState(false);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
-  const [importSuccess, setImportSuccess] = useState('');
+  // Teammate sync state (manual: the user triggers it with the "Sincronizar logs" button)
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null); // { severity, message }
+  const [teammatePicker, setTeammatePicker] = useState(null); // teammates[] when the team has several
 
   // Monday of the current display week
   const weekStart = useMemo(() => getMonday(new Date(), weekOffset), [weekOffset]);
@@ -264,47 +264,47 @@ export default function MisSitiosPage() {
 
   useEffect(() => { loadLogs(); }, [loadLogs]);
 
-  // Check if teammate has logs for this week (dry_run preview)
-  const checkTeammateLogs = useCallback(async () => {
-    setImportPreview(null);
-    setImportSuccess('');
+  /**
+   * Copies the teammate's logs for the displayed week into the user's own logs.
+   * Only creates missing logs — existing ones are never overwritten.
+   * @param {number} [sourceUserId] - Required only when the team has several teammates.
+   */
+  const handleSync = async (sourceUserId) => {
+    setSyncing(true);
+    setTeammatePicker(null);
+    setSyncResult(null);
     try {
       const result = await importFromTeammate({
+        ...(sourceUserId ? { source_user_id: sourceUserId } : {}),
         fecha_inicio: formatDate(weekDates[0]),
         fecha_fin: formatDate(weekDates[6]),
-        dry_run: true,
-      });
-      if (result.summary?.source_logs_total > 0) {
-        setImportPreview(result);
-      }
-    } catch {
-      // Silently ignore — teammate may not exist or no logs
-    }
-  }, [weekDates]);
-
-  useEffect(() => { checkTeammateLogs(); }, [checkTeammateLogs]);
-
-  // Execute the actual import
-  const handleImport = async (overwrite = false) => {
-    if (!importPreview) return;
-    setImportLoading(true);
-    try {
-      const result = await importFromTeammate({
-        source_user_id: importPreview.source_user.id,
-        fecha_inicio: importPreview.fecha_inicio,
-        fecha_fin: importPreview.fecha_fin,
-        overwrite_existing: overwrite,
+        overwrite_existing: false,
         dry_run: false,
       });
-      const { created, updated } = result.summary;
-      setImportSuccess(`Importados: ${created} creados, ${updated} actualizados`);
-      setImportDialogOpen(false);
-      setImportPreview(null);
-      loadLogs();
-    } catch {
-      setError('Error al importar logs del compañero');
+      const { created = 0, skipped_existing = 0, source_logs_total = 0 } = result.summary || {};
+      const mate = result.source_user ? result.source_user.nombre : 'tu compañero';
+
+      if (created > 0) {
+        setSyncResult({
+          severity: 'success',
+          message: `Se sincronizaron ${created} log${created !== 1 ? 's' : ''} de ${mate}`
+            + (skipped_existing > 0 ? ` (${skipped_existing} ya los tenías)` : ''),
+        });
+        loadLogs();
+      } else if (source_logs_total === 0) {
+        setSyncResult({ severity: 'info', message: `${mate} aún no tiene logs en esta semana` });
+      } else {
+        setSyncResult({ severity: 'info', message: 'Ya estás al día: no hay logs nuevos para sincronizar' });
+      }
+    } catch (err) {
+      const data = err.response?.data;
+      if (err.response?.status === 400 && Array.isArray(data?.teammates)) {
+        setTeammatePicker(data.teammates); // several teammates → ask which one
+      } else {
+        setSyncResult({ severity: 'error', message: data?.message || 'No se pudo sincronizar los logs' });
+      }
     } finally {
-      setImportLoading(false);
+      setSyncing(false);
     }
   };
 
@@ -451,6 +451,14 @@ export default function MisSitiosPage() {
         subtitle={team ? `Equipo ${team.team_numero ?? team.team_id}` : 'Cargando equipo...'}
         action={
           <Box sx={{ display: 'flex', gap: 1, '& > button': { flex: { xs: 1, sm: 'none' } } }}>
+            <Button
+              variant="outlined"
+              startIcon={syncing ? <CircularProgress size={16} /> : <Sync />}
+              onClick={() => handleSync()}
+              disabled={syncing}
+            >
+              {syncing ? 'Sincronizando...' : 'Sincronizar logs'}
+            </Button>
             <Button variant="outlined" startIcon={<Assessment />} onClick={() => setReportModalOpen(true)}>
               Generar reporte
             </Button>
@@ -465,50 +473,6 @@ export default function MisSitiosPage() {
       />
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
-      {importSuccess && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setImportSuccess('')}>{importSuccess}</Alert>}
-
-      {/* Teammate import banner */}
-      {importPreview && (
-        <Paper
-          elevation={0}
-          sx={{
-            mb: 2,
-            p: 2,
-            border: '1px solid',
-            borderColor: (theme) => alpha(theme.palette.info.main, 0.3),
-            bgcolor: (theme) => alpha(theme.palette.info.main, 0.04),
-            borderRadius: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 2,
-            flexWrap: 'wrap',
-          }}
-        >
-          <PeopleAlt color="info" />
-          <Box sx={{ flex: 1, minWidth: 200 }}>
-            <Typography variant="body2" fontWeight={600}>
-              {importPreview.source_user.nombre} {importPreview.source_user.apellido} tiene{' '}
-              {importPreview.summary.source_logs_total} log{importPreview.summary.source_logs_total !== 1 ? 's' : ''} esta semana
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {importPreview.summary.create_count > 0 && `${importPreview.summary.create_count} nuevo${importPreview.summary.create_count !== 1 ? 's' : ''}`}
-              {importPreview.summary.create_count > 0 && importPreview.summary.update_count > 0 && ', '}
-              {importPreview.summary.update_count > 0 && `${importPreview.summary.update_count} ya existente${importPreview.summary.update_count !== 1 ? 's' : ''}`}
-            </Typography>
-          </Box>
-          <Button
-            variant="outlined"
-            size="small"
-            onClick={() => setImportDialogOpen(true)}
-            sx={{ textTransform: 'none', fontWeight: 600 }}
-          >
-            Importar logs
-          </Button>
-          <IconButton size="small" onClick={() => setImportPreview(null)} sx={{ ml: -1 }}>
-            <Typography variant="caption" color="text.secondary">✕</Typography>
-          </IconButton>
-        </Paper>
-      )}
 
       {/* Controls bar */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3 } }}>
@@ -968,69 +932,37 @@ export default function MisSitiosPage() {
         </Fab>
       )}
 
-      {/* Import confirmation dialog */}
-      <Dialog open={importDialogOpen} onClose={() => !importLoading && setImportDialogOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>Importar logs de compañero</DialogTitle>
-        <DialogContent>
-          {importPreview && (
-            <Box>
-              <Typography variant="body2" sx={{ mb: 2 }}>
-                Se copiarán los logs de <strong>{importPreview.source_user.nombre} {importPreview.source_user.apellido}</strong> del{' '}
-                {new Date(importPreview.fecha_inicio + 'T12:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })} al{' '}
-                {new Date(importPreview.fecha_fin + 'T12:00:00').toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}.
-              </Typography>
-
-              <Paper elevation={0} sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, mb: 2 }}>
-                <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>Resumen:</Typography>
-                <Typography variant="body2">
-                  Total logs del compañero: <strong>{importPreview.summary.source_logs_total}</strong>
-                </Typography>
-                {importPreview.summary.create_count > 0 && (
-                  <Typography variant="body2" color="success.main">
-                    + {importPreview.summary.create_count} log{importPreview.summary.create_count !== 1 ? 's' : ''} nuevos a crear
-                  </Typography>
-                )}
-                {importPreview.summary.update_count > 0 && (
-                  <Typography variant="body2" color="info.main">
-                    ~ {importPreview.summary.update_count} log{importPreview.summary.update_count !== 1 ? 's' : ''} que ya tienes
-                  </Typography>
-                )}
-              </Paper>
-
-              <Typography variant="caption" color="text.secondary">
-                Después de importar podés editar cada log individualmente si algo es diferente.
-              </Typography>
-            </Box>
-          )}
+      {/* Teammate picker — only shown when the team has more than one teammate */}
+      <Dialog open={!!teammatePicker} onClose={() => setTeammatePicker(null)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 700 }}>¿De quién sincronizar?</DialogTitle>
+        <DialogContent sx={{ px: 1 }}>
+          <List>
+            {(teammatePicker || []).map(m => (
+              <ListItemButton key={m.id} onClick={() => handleSync(m.id)}>
+                <ListItemText primary={`${m.nombre} ${m.apellido || ''}`.trim()} />
+              </ListItemButton>
+            ))}
+          </List>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2, gap: 1 }}>
-          <Button
-            onClick={() => setImportDialogOpen(false)}
-            disabled={importLoading}
-            sx={{ textTransform: 'none' }}
-          >
-            Cancelar
-          </Button>
-          {importPreview?.summary?.update_count > 0 && (
-            <Button
-              variant="outlined"
-              onClick={() => handleImport(true)}
-              disabled={importLoading}
-              sx={{ textTransform: 'none' }}
-            >
-              {importLoading ? <CircularProgress size={20} /> : 'Importar y sobrescribir'}
-            </Button>
-          )}
-          <Button
-            variant="contained"
-            onClick={() => handleImport(false)}
-            disabled={importLoading}
-            sx={{ textTransform: 'none' }}
-          >
-            {importLoading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : `Importar${importPreview?.summary?.update_count > 0 ? ' solo nuevos' : ''}`}
-          </Button>
+        <DialogActions>
+          <Button onClick={() => setTeammatePicker(null)}>Cancelar</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Sync result */}
+      <Snackbar
+        open={!!syncResult}
+        autoHideDuration={6000}
+        onClose={(_, reason) => { if (reason !== 'clickaway') setSyncResult(null); }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ bottom: { xs: 'calc(88px + env(safe-area-inset-bottom))', md: 24 } }}
+      >
+        {syncResult ? (
+          <Alert severity={syncResult.severity} variant="filled" onClose={() => setSyncResult(null)} sx={{ width: '100%' }}>
+            {syncResult.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
 
       {/* Generate report modal */}
       <GenerateLogReportModal
