@@ -14,7 +14,6 @@ import {
   MenuItem,
   Stack,
   Divider,
-  alpha,
 } from '@mui/material';
 import {
   Add,
@@ -37,6 +36,7 @@ import UserFormModal from './UserFormModal';
 import UserDetailModal from './UserDetailModal';
 import { getUsers, deactivateUser } from '../../services/users.service';
 import { useAuth } from '../../context/AuthContext';
+import StatCard from '../../components/ui/StatCard';
 
 const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', accountant: 'accountant', cleaner: 'Cleaner / Gardener' };
 const ROLE_COLORS = { admin: 'error', manager: 'warning', accountant: 'info', cleaner: 'success' };
@@ -64,48 +64,6 @@ function getVisaStatus(dateStr) {
   if (diffDays < 0) return 'expired';
   if (diffDays <= 30) return 'warning';
   return 'ok';
-}
-
-/**
- * Tarjeta de estadística reutilizable para mostrar métricas resumidas.
- */
-function StatCard({ icon, label, value, color = 'primary.main' }) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 2,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        border: '1px solid',
-        borderColor: 'divider',
-      }}
-    >
-      <Box
-        sx={{
-          width: 44,
-          height: 44,
-          borderRadius: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-          color,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box>
-        <Typography variant="h5" fontWeight={700}>
-          {value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {label}
-        </Typography>
-      </Box>
-    </Paper>
-  );
 }
 
 /**

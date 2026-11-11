@@ -12,6 +12,8 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { getDashboardStats } from '../../services/dashboard.service';
+import StatCard from '../../components/ui/StatCard';
+import SectionTitle from '../../components/ui/SectionTitle';
 
 const ROLE_LABELS = {
   admin: 'Administrador',
@@ -52,82 +54,7 @@ const QUICK_LINKS = {
   ],
 };
 
-/* ─── Section heading ─── */
-function SectionTitle({ children }) {
-  return (
-    <Typography
-      variant="subtitle2"
-      color="text.secondary"
-      sx={{ mb: 1.5, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: '0.75rem' }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
 /* ─── Stat Card ─── */
-/**
- * @param {string}  tone      - Palette color key: primary | success | warning | error | info.
- * @param {boolean} highlight - Tint the card with its tone (used for things that need attention).
- */
-function StatCard({ icon, label, value, subtitle, tone = 'primary', highlight = false, onClick }) {
-  const content = (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', p: 2 }}>
-      <Box
-        sx={{
-          width: 48, height: 48, borderRadius: 2.5, flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          bgcolor: (t) => alpha(t.palette[tone].main, 0.12),
-          color: `${tone}.main`,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box sx={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, lineHeight: 1.15 }}>
-          {value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.3, mt: 0.25 }}>
-          {label}
-        </Typography>
-        {subtitle && (
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block', textTransform: 'none', letterSpacing: 0 }}>
-            {subtitle}
-          </Typography>
-        )}
-      </Box>
-      {onClick && <ChevronRight fontSize="small" sx={{ color: 'text.disabled', flexShrink: 0 }} />}
-    </Box>
-  );
-
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        height: '100%',
-        overflow: 'hidden',
-        border: '1px solid',
-        borderColor: (t) => (highlight ? alpha(t.palette[tone].main, 0.4) : t.palette.divider),
-        bgcolor: (t) => (highlight ? alpha(t.palette[tone].main, 0.05) : t.palette.background.paper),
-        transition: 'border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease',
-        ...(onClick && {
-          '&:hover': {
-            borderColor: `${tone}.main`,
-            boxShadow: (t) => `0 4px 14px ${alpha(t.palette[tone].main, 0.14)}`,
-            transform: 'translateY(-1px)',
-          },
-        }),
-      }}
-    >
-      {onClick ? (
-        <ButtonBase onClick={onClick} sx={{ display: 'flex', width: '100%', height: '100%', justifyContent: 'flex-start' }}>
-          {content}
-        </ButtonBase>
-      ) : content}
-    </Paper>
-  );
-}
-
 /* ─── Skeleton cards while loading ─── */
 function StatsSkeleton({ count = 4 }) {
   return (

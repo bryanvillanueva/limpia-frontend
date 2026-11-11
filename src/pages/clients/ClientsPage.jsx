@@ -12,7 +12,6 @@ import {
   InputAdornment,
   Skeleton,
   Stack,
-  alpha,
 } from '@mui/material';
 import {
   Add,
@@ -28,49 +27,7 @@ import DataTable from '../../components/ui/DataTable';
 import ClientFormModal from './ClientFormModal';
 import { getClients } from '../../services/clients.service';
 import { useAuth } from '../../context/AuthContext';
-
-/**
- * Stat card for displaying a metric with icon.
- * Reusable component consistent with UsersPage pattern.
- */
-function StatCard({ icon, label, value, color = 'primary.main' }) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 2,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        border: '1px solid',
-        borderColor: 'divider',
-      }}
-    >
-      <Box
-        sx={{
-          width: 44,
-          height: 44,
-          borderRadius: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-          color,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box>
-        <Typography variant="h5" fontWeight={700}>
-          {value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {label}
-        </Typography>
-      </Box>
-    </Paper>
-  );
-}
+import StatCard from '../../components/ui/StatCard';
 
 /**
  * ClientsPage – Client management screen.

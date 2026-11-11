@@ -1,7 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
-  Button, IconButton, Tooltip, Alert, Box, Typography,
-  Paper, TextField, InputAdornment, MenuItem, Grid, Chip, Stack, Divider, alpha,
+  Button,
+  IconButton,
+  Tooltip,
+  Alert,
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  InputAdornment,
+  MenuItem,
+  Grid,
+  Chip,
+  Stack,
+  Divider,
 } from '@mui/material';
 import { Add, Edit, Visibility, Block, Upload, Search, LocationOn, CheckCircle, Cancel, Groups } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
@@ -15,45 +27,7 @@ import { getSites, deactivateSite } from '../../services/sites.service';
 import { getClients } from '../../services/clients.service';
 import { getTeams } from '../../services/teams.service';
 import { useAuth } from '../../context/AuthContext';
-
-function StatCard({ icon, label, value, color = 'primary.main' }) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 2,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 2,
-        border: '1px solid',
-        borderColor: 'divider',
-      }}
-    >
-      <Box
-        sx={{
-          width: 44,
-          height: 44,
-          borderRadius: 2,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-          color,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box>
-        <Typography variant="h5" fontWeight={700}>
-          {value}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {label}
-        </Typography>
-      </Box>
-    </Paper>
-  );
-}
+import StatCard from '../../components/ui/StatCard';
 
 export default function SitesPage() {
   const { user } = useAuth();

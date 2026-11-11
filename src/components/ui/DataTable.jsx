@@ -37,9 +37,13 @@ export default function DataTable({
                 borderColor: 'divider',
                 borderRadius: 2,
                 bgcolor: 'background.paper',
-                p: 1.5,
+                p: 2,
                 cursor: onRowClick ? 'pointer' : 'default',
-                '&:hover': onRowClick ? { borderColor: 'primary.main' } : undefined,
+                transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                '&:hover': onRowClick
+                  ? { borderColor: 'primary.main', boxShadow: '0 4px 14px rgba(38,97,79,0.12)' }
+                  : undefined,
+                '&:active': onRowClick ? { borderColor: 'primary.main' } : undefined,
               }}
             >
               {mobileCardRender(row)}
@@ -54,7 +58,7 @@ export default function DataTable({
     <TableContainer
       component={Paper}
       elevation={0}
-      sx={{ border: '1px solid', borderColor: 'divider', overflow: 'auto' }}
+      sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflow: 'auto' }}
     >
       <Table>
         <TableHead>
