@@ -198,13 +198,17 @@ export default function Sidebar({ open, onClose, variant = 'permanent' }) {
       variant={variant}
       open={variant === 'temporary' ? open : true}
       onClose={onClose}
+      ModalProps={{ keepMounted: true }} // smoother open on mobile
       sx={{
         width: DRAWER_WIDTH,
         flexShrink: 0,
         '& .MuiDrawer-paper': {
           width: DRAWER_WIDTH,
+          maxWidth: '85vw',
           boxSizing: 'border-box',
           bgcolor: 'background.paper',
+          pt: 'env(safe-area-inset-top)',
+          pb: 'env(safe-area-inset-bottom)',
         },
       }}
     >

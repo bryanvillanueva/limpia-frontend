@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Typography, IconButton, Alert, Button, Tooltip, Skeleton,
-  ToggleButton, ToggleButtonGroup, Chip, alpha,
+  ToggleButton, ToggleButtonGroup, Chip, alpha, Fab, useMediaQuery, useTheme,
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
 } from '@mui/material';
 import {
@@ -15,6 +15,7 @@ import LogFormModal from './LogFormModal';
 import GenerateLogReportModal from './GenerateLogReportModal';
 import { getMyLogs, importFromTeammate } from '../../services/logs.service';
 import { getMyTeam, getWeekPlan, getTeamSites } from '../../services/planner.service';
+import { getCycleWeek } from '../../utils/cycle';
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const CYCLE_WEEKS = [1, 2, 3, 4];
@@ -120,12 +121,17 @@ function PlannedIndicator({ item }) {
 }
 
 export default function MisSitiosPage() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   const [team, setTeam] = useState(null);
-  const [cycleWeek, setCycleWeek] = useState(
-    () => Number(localStorage.getItem('limpia_cycle_week')) || 1,
-  );
   const [weekOffset, setWeekOffset] = useState(0);
-  const [viewMode, setViewMode] = useState('week'); // 'week' | 'day'
+  // Manual override of the planner guide week; null = follow the displayed week automatically
+  const [cycleOverride, setCycleOverride] = useState(null);
+  // The 7-column week grid is hard to use on a phone, so default to the day cards there.
+  const [viewMode, setViewMode] = useState(
+    () => (window.matchMedia('(max-width: 899.95px)').matches ? 'day' : 'week'),
+  ); // 'week' | 'day'
   const [dayOffset, setDayOffset] = useState(0);    // 0=today, -1=yesterday, +1=tomorrow...
   const [plannerData, setPlannerData] = useState([]);
   const [teamSites, setTeamSites] = useState([]);
@@ -150,13 +156,15 @@ export default function MisSitiosPage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importSuccess, setImportSuccess] = useState('');
 
-  // Persist cycle week selection
-  useEffect(() => {
-    localStorage.setItem('limpia_cycle_week', String(cycleWeek));
-  }, [cycleWeek]);
-
   // Monday of the current display week
   const weekStart = useMemo(() => getMonday(new Date(), weekOffset), [weekOffset]);
+
+  // Planner cycle week (1-4) derived from the displayed week; the user can override it manually
+  const autoCycleWeek = useMemo(() => getCycleWeek(weekStart), [weekStart]);
+  const cycleWeek = cycleOverride ?? autoCycleWeek;
+
+  // Moving to another week goes back to the automatic cycle week
+  useEffect(() => { setCycleOverride(null); }, [weekStart]);
 
   // Array of 7 dates for the week columns
   const weekDates = useMemo(() =>
@@ -442,13 +450,16 @@ export default function MisSitiosPage() {
         title="Registrar Logs"
         subtitle={team ? `Equipo ${team.team_numero ?? team.team_id}` : 'Cargando equipo...'}
         action={
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, '& > button': { flex: { xs: 1, sm: 'none' } } }}>
             <Button variant="outlined" startIcon={<Assessment />} onClick={() => setReportModalOpen(true)}>
               Generar reporte
             </Button>
-            <Button variant="contained" startIcon={<Add />} onClick={openCustomModal}>
-              Agregar log
-            </Button>
+            {/* On mobile the floating button below replaces this one */}
+            {!isMobile && (
+              <Button variant="contained" startIcon={<Add />} onClick={openCustomModal}>
+                Agregar log
+              </Button>
+            )}
           </Box>
         }
       />
@@ -500,13 +511,14 @@ export default function MisSitiosPage() {
       )}
 
       {/* Controls bar */}
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: { xs: 1.5, sm: 2 }, mb: { xs: 2, sm: 3 } }}>
         {/* View mode toggle */}
         <ToggleButtonGroup
           exclusive
           value={viewMode}
           onChange={(_, val) => { if (val != null) setViewMode(val); }}
           size="small"
+          sx={{ width: { xs: '100%', sm: 'auto' }, '& .MuiToggleButton-root': { flex: { xs: 1, sm: 'none' } } }}
         >
           <ToggleButton value="week" sx={{ px: 1.5, textTransform: 'none', fontWeight: 600, fontSize: '0.75rem', gap: 0.5 }}>
             <ViewWeek fontSize="small" /> Semana
@@ -528,22 +540,26 @@ export default function MisSitiosPage() {
             gap: 0.5,
             px: 0.5,
             py: 0.25,
+            width: { xs: '100%', sm: 'auto' },
+            justifyContent: { xs: 'space-between', sm: 'flex-start' },
           }}
         >
           <IconButton
             size="small"
+            aria-label="Anterior"
             onClick={() => viewMode === 'day' ? setDayOffset(d => d - 1) : setWeekOffset(w => w - 1)}
           >
             <ChevronLeft fontSize="small" />
           </IconButton>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, px: 1, flex: { xs: 1, sm: 'none' } }}>
             <CalendarMonth color="primary" fontSize="small" />
-            <Typography variant="body2" fontWeight={600} sx={{ minWidth: { xs: 90, sm: 140 }, textAlign: 'center' }}>
+            <Typography variant="body2" fontWeight={600} sx={{ minWidth: { xs: 90, sm: 140 }, textAlign: 'center', textTransform: 'capitalize' }}>
               {viewMode === 'day' ? dayLabel : weekLabel}
             </Typography>
           </Box>
           <IconButton
             size="small"
+            aria-label="Siguiente"
             onClick={() => viewMode === 'day' ? setDayOffset(d => d + 1) : setWeekOffset(w => w + 1)}
           >
             <ChevronRight fontSize="small" />
@@ -560,26 +576,27 @@ export default function MisSitiosPage() {
         </Paper>
 
         {/* Cycle week selector (planner guide) */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Tooltip title="Semana del planner usada como guía" arrow>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: { xs: '100%', sm: 'auto' } }}>
+          <Tooltip title="Semana del planner usada como guía (• = la que corresponde a la fecha)" arrow>
             <EventNote fontSize="small" color="action" />
           </Tooltip>
           <ToggleButtonGroup
             exclusive
             value={cycleWeek}
-            onChange={(_, val) => { if (val != null) setCycleWeek(val); }}
+            onChange={(_, val) => { if (val != null) setCycleOverride(val === autoCycleWeek ? null : val); }}
             size="small"
+            sx={{ flex: { xs: 1, sm: 'none' }, '& .MuiToggleButton-root': { flex: { xs: 1, sm: 'none' } } }}
           >
             {CYCLE_WEEKS.map(w => (
               <ToggleButton key={w} value={w} sx={{ px: 1.5, textTransform: 'none', fontWeight: 600, fontSize: '0.75rem' }}>
-                Sem {w}
+                Sem {w}{w === autoCycleWeek ? ' •' : ''}
               </ToggleButton>
             ))}
           </ToggleButtonGroup>
         </Box>
 
         {/* Log count */}
-        <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ ml: { xs: 0, sm: 'auto' } }}>
           {viewMode === 'day'
             ? `${dayLogCount} log${dayLogCount !== 1 ? 's' : ''} hoy`
             : `${logs.length} log${logs.length !== 1 ? 's' : ''} esta semana`
@@ -670,7 +687,7 @@ export default function MisSitiosPage() {
                       {cellLogs.map(log => (
                         <Box
                           key={log.id}
-                          sx={{ cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
+                          sx={{ cursor: 'pointer', p: { xs: 0.5, md: 0 }, '&:hover': { opacity: 0.8 } }}
                           onClick={() => openEditModal(log, row)}
                         >
                           <LogChip log={log} />
@@ -690,9 +707,10 @@ export default function MisSitiosPage() {
 
                   {/* Add log button */}
                   <Button
-                    size="small"
+                    size={isMobile ? 'medium' : 'small'}
                     variant="outlined"
                     startIcon={<Add />}
+                    fullWidth={isMobile}
                     onClick={() => openModal(row, selectedDayIdx, plannerItems)}
                     sx={{ textTransform: 'none' }}
                   >
@@ -928,6 +946,26 @@ export default function MisSitiosPage() {
             </Table>
           </TableContainer>
         )
+      )}
+
+      {/* Mobile quick-add: always reachable with the thumb */}
+      {isMobile && (
+        <Fab
+          color="primary"
+          variant="extended"
+          aria-label="Agregar log"
+          onClick={openCustomModal}
+          sx={{
+            position: 'fixed',
+            right: 16,
+            bottom: 'calc(16px + env(safe-area-inset-bottom))',
+            zIndex: (t) => t.zIndex.speedDial,
+            textTransform: 'none',
+          }}
+        >
+          <Add sx={{ mr: 1 }} />
+          Agregar log
+        </Fab>
       )}
 
       {/* Import confirmation dialog */}

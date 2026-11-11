@@ -10,11 +10,13 @@ import PlannerGrid from './PlannerGrid';
 import AddItemModal from './AddItemModal';
 import { useAuth } from '../../context/AuthContext';
 import { getTeams } from '../../services/teams.service';
+import { getCycleWeek } from '../../utils/cycle';
 import {
   getMyTeam, getWeekPlan, getTeamSites, createItem, updatePlan, updateItem, deleteItem,
 } from '../../services/planner.service';
 
 const CYCLE_WEEKS = [1, 2, 3, 4];
+const CURRENT_CYCLE_WEEK = getCycleWeek(new Date());
 
 const COLOR_OPTIONS = [
   { value: 'yellow', hex: '#F9A825' },
@@ -39,7 +41,7 @@ export default function PlannerPage() {
   const [teamsLoading, setTeamsLoading] = useState(true);
 
   /* ── Week & grid state ── */
-  const [cycleWeek, setCycleWeek] = useState(1);
+  const [cycleWeek, setCycleWeek] = useState(CURRENT_CYCLE_WEEK);
   const [plans, setPlans] = useState([]);
   const [dayTotals, setDayTotals] = useState({});
   const [gridLoading, setGridLoading] = useState(false);
@@ -279,7 +281,7 @@ export default function PlannerPage() {
         >
           {CYCLE_WEEKS.map(w => (
             <ToggleButton key={w} value={w} sx={{ px: 2, textTransform: 'none', fontWeight: 600 }}>
-              Sem {w}
+              Sem {w}{w === CURRENT_CYCLE_WEEK ? ' •' : ''}
             </ToggleButton>
           ))}
         </ToggleButtonGroup>

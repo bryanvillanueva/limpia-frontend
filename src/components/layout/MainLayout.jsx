@@ -31,13 +31,15 @@ export default function MainLayout() {
         component="main"
         sx={{
           flexGrow: 1,
-          p: { xs: 2, md: 3 },
+          p: { xs: 1.5, sm: 2, md: 3 },
+          pb: { xs: 'calc(24px + env(safe-area-inset-bottom))', md: 3 },
+          minWidth: 0, // let wide tables scroll inside instead of stretching the page
           width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
           minHeight: '100vh',
           bgcolor: 'background.default',
         }}
       >
-        <Toolbar /> {/* spacer for AppBar height */}
+        <Toolbar sx={{ mt: 'env(safe-area-inset-top)' }} /> {/* spacer for AppBar height */}
         <Outlet />
       </Box>
     </Box>

@@ -41,23 +41,34 @@ export default function Topbar({ onMenuClick }) {
         // On desktop, offset by sidebar width so it doesn't cover the logo
         width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
         ml: { md: `${DRAWER_WIDTH}px` },
+        // Keep content clear of the notch / status bar when installed as a PWA
+        pt: 'env(safe-area-inset-top)',
       }}
     >
-      <Toolbar sx={{ gap: 1 }}>
+      <Toolbar sx={{ gap: 1, px: { xs: 1, sm: 3 } }}>
         <IconButton
           edge="start"
+          aria-label="Abrir menú"
           onClick={onMenuClick}
           sx={{ display: { md: 'none' } }}
         >
           <Menu />
         </IconButton>
 
+        {/* Brand — only on mobile, where the sidebar logo is hidden */}
+        <Typography
+          variant="subtitle1"
+          sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: 'primary.main' }}
+        >
+          Limpia
+        </Typography>
+
         {/* spacer */}
         <Box sx={{ flexGrow: 1 }} />
 
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
           <Tooltip title={mode === 'dark' ? 'Modo claro' : 'Modo oscuro'}>
-            <IconButton onClick={toggleMode} size="small" sx={{ color: 'text.secondary' }}>
+            <IconButton onClick={toggleMode} size="small" aria-label="Cambiar tema" sx={{ color: 'text.secondary' }}>
               {mode === 'dark' ? <Brightness7 fontSize="small" /> : <Brightness4 fontSize="small" />}
             </IconButton>
           </Tooltip>
@@ -67,7 +78,7 @@ export default function Topbar({ onMenuClick }) {
               display: 'flex', alignItems: 'center', gap: 1.5,
               bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
               borderRadius: 2,
-              py: 0.5, px: 1.5,
+              py: 0.5, px: { xs: 0.5, sm: 1.5 },
               ml: 0.5,
             }}
           >
@@ -90,7 +101,7 @@ export default function Topbar({ onMenuClick }) {
           </Box>
 
           <Tooltip title="Cerrar sesión">
-            <IconButton onClick={handleLogout} size="small" sx={{ color: 'text.secondary' }}>
+            <IconButton onClick={handleLogout} size="small" aria-label="Cerrar sesión" sx={{ color: 'text.secondary' }}>
               <Logout fontSize="small" />
             </IconButton>
           </Tooltip>

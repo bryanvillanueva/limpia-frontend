@@ -83,6 +83,7 @@ export const getTheme = (mode) =>
             borderRadius: 8,
             padding: '8px 20px',
             fontSize: '0.8125rem',
+            '@media (pointer: coarse)': { minHeight: 44 },
           },
           containedPrimary: {
             '&:hover': { backgroundColor: GREEN.dark },
@@ -152,9 +153,62 @@ export const getTheme = (mode) =>
       MuiTextField: {
         defaultProps: { variant: 'outlined', size: 'small' },
       },
+      // iOS Safari zooms the page on focus when an input's font-size is < 16px
+      MuiInputBase: {
+        styleOverrides: {
+          input: ({ theme }) => ({
+            [theme.breakpoints.down('sm')]: { fontSize: '1rem' },
+          }),
+        },
+      },
+      MuiIconButton: {
+        styleOverrides: {
+          root: {
+            // Minimum comfortable touch target on touch screens (44px)
+            '@media (pointer: coarse)': { minWidth: 44, minHeight: 44 },
+          },
+        },
+      },
+      MuiToggleButton: {
+        styleOverrides: {
+          root: {
+            '@media (pointer: coarse)': { minHeight: 44 },
+          },
+        },
+      },
+      MuiListItemButton: {
+        styleOverrides: {
+          root: {
+            '@media (pointer: coarse)': { minHeight: 46 },
+          },
+        },
+      },
       MuiDialog: {
         styleOverrides: {
-          paper: { borderRadius: 14 },
+          paper: ({ theme }) => ({
+            borderRadius: 14,
+            [theme.breakpoints.down('sm')]: {
+              // Non-fullscreen dialogs: tighter margins + keep within the visible viewport
+              '&:not(.MuiDialog-paperFullScreen)': {
+                margin: 12,
+                width: 'calc(100% - 24px)',
+                maxWidth: 'calc(100% - 24px)',
+                maxHeight: 'calc(100% - 24px)',
+              },
+            },
+          }),
+        },
+      },
+      MuiDialogActions: {
+        styleOverrides: {
+          root: ({ theme }) => ({
+            [theme.breakpoints.down('sm')]: {
+              padding: '10px 16px',
+              flexWrap: 'wrap',
+              gap: 8,
+              '& > :not(style) ~ :not(style)': { marginLeft: 0 },
+            },
+          }),
         },
       },
       MuiDrawer: {

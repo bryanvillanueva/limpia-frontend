@@ -2,10 +2,30 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Remove the 300ms tap delay / accidental double-tap zoom on controls */
+button, a, [role="button"], input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Thicker, easier-to-grab scrollbars on touch devices */
+@media (pointer: coarse) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
 }
 
 /* Slim scrollbar — keeps the green accent */

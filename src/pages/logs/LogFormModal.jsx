@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, ToggleButton, ToggleButtonGroup, TextField,
-  Typography, Box, Alert, Autocomplete,
+  Typography, Box, Alert, Autocomplete, useMediaQuery, useTheme,
 } from '@mui/material';
 import { Delete } from '@mui/icons-material';
 import { createLog, updateLog, deleteLog } from '../../services/logs.service';
@@ -32,6 +32,8 @@ const DAY_NAMES_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'vie
  */
 export default function LogFormModal({ open, onClose, site, fecha, plannerEntry, teamSites, existingLog, onSaved }) {
   const isEdit = !!existingLog;
+  const theme = useTheme();
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
 
   const [selectedSite, setSelectedSite] = useState(null);
   const [logDate, setLogDate] = useState('');
@@ -140,7 +142,7 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
     [s.direccion_linea1 || s.nombre, s.suburb].filter(Boolean).join(', ') || `Sitio ${s.site_id ?? s.id}`;
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={fullScreen}>
       <DialogTitle>
         {isEdit ? 'Editar log' : 'Registrar log'}
       </DialogTitle>
@@ -174,7 +176,7 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
         )}
 
         {/* Date */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' }, gap: 1.5 }}>
           <Box sx={{ flex: 1 }}>
             <Typography variant="caption" color="text.secondary">Fecha</Typography>
             <Typography variant="body2" fontWeight={600} sx={{ textTransform: 'capitalize' }}>
@@ -186,7 +188,7 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
             value={logDate}
             onChange={(e) => setLogDate(e.target.value)}
             size="small"
-            sx={{ width: 160 }}
+            sx={{ width: { xs: '100%', sm: 160 } }}
           />
         </Box>
 
@@ -227,7 +229,7 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
             type="number"
             size="small"
             required
-            slotProps={{ htmlInput: { min: 0, step: 'any' } }}
+            slotProps={{ htmlInput: { min: 0, step: 'any', inputMode: 'decimal' } }}
             fullWidth
           />
         )}
@@ -243,7 +245,13 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
           fullWidth
         />
       </DialogContent>
-      <DialogActions sx={{ justifyContent: isEdit ? 'space-between' : 'flex-end' }}>
+      <DialogActions
+        sx={{
+          justifyContent: isEdit ? 'space-between' : 'flex-end',
+          // Keep the actions clear of the home-indicator on full-screen mobile
+          pb: { xs: 'calc(10px + env(safe-area-inset-bottom))', sm: 1 },
+        }}
+      >
         {isEdit && (
           <Button
             color="error"
@@ -254,7 +262,7 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
             {deleting ? 'Eliminando...' : confirmDelete ? 'Confirmar eliminar' : 'Eliminar'}
           </Button>
         )}
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flex: { xs: 1, sm: 'none' }, '& > button': { flex: { xs: 1, sm: 'none' } } }}>
           <Button onClick={onClose}>Cancelar</Button>
           <Button variant="contained" onClick={handleSubmit} disabled={saving || deleting}>
             {saving ? 'Guardando...' : isEdit ? 'Actualizar' : 'Registrar'}
