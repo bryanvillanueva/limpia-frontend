@@ -10,7 +10,7 @@ const ENTRY_TYPE_LABELS = { SERVICE: 'Service', BINS: 'Bins', CUSTOM: 'Personali
 
 export default function GenerateMyReportModal({ open, onClose, cycle, onGenerated }) {
   const [logs, setLogs] = useState([]);
-  const [estado, setEstado] = useState('enviado');
+  const [estado, setEstado] = useState('Enviado');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +20,7 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
   useEffect(() => {
     if (!open || !billingPeriodId) return;
     setLoading(true);
-    setEstado('enviado');
+    setEstado('Enviado');
     setError('');
     getPeriodLogs({ billing_period_id: billingPeriodId })
       .then(setLogs)
@@ -75,8 +75,8 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
             onChange={(_, val) => { if (val) setEstado(val); }}
             size="small"
           >
-            <ToggleButton value="borrador" sx={{ textTransform: 'none', fontWeight: 600 }}>Borrador</ToggleButton>
-            <ToggleButton value="enviado"  sx={{ textTransform: 'none', fontWeight: 600 }}>Enviar</ToggleButton>
+            <ToggleButton value="Borrador" sx={{ textTransform: 'none', fontWeight: 600 }}>Borrador</ToggleButton>
+            <ToggleButton value="Enviado"  sx={{ textTransform: 'none', fontWeight: 600 }}>Enviar</ToggleButton>
           </ToggleButtonGroup>
         </Box>
 
