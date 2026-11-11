@@ -6,8 +6,7 @@ import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import GenerateMyReportModal from './GenerateMyReportModal';
 import { getMyReports, getCycle } from '../../services/reports.service';
-
-const ESTADO_COLORS = { Borrador: 'default', Enviado: 'warning', Pagado: 'success', Devuelto: 'error', Eliminado: 'default' };
+import StatusBadge from '../../components/ui/StatusBadge';
 
 export default function MyReportsPage() {
   const navigate = useNavigate();
@@ -59,7 +58,7 @@ export default function MyReportsPage() {
       field: 'estado', label: 'Estado',
       render: row => {
         const estado = row.estado || 'Enviado';
-        return <Chip label={estado} color={ESTADO_COLORS[estado] || 'default'} size="small" />;
+        return <StatusBadge value={estado} />;
       },
     },
     {
@@ -108,14 +107,12 @@ export default function MyReportsPage() {
         loading={loading}
         emptyMessage="Aún no tienes reportes generados"
         mobileCardRender={(row) => {
-          // Same status/colors as the desktop table
           const estado = row.estado || 'Enviado';
-          const cfg = { label: estado, color: ESTADO_COLORS[estado] || 'default' };
           return (
             <Stack spacing={1}>
               <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
                 <Typography variant="body2" fontWeight={700}>{buildTitle(row)}</Typography>
-                <Chip label={cfg.label} color={cfg.color} size="small" sx={{ flexShrink: 0 }} />
+                <StatusBadge value={estado} />
               </Box>
               <Stack direction="row" justifyContent="flex-end">
                 <Tooltip title="Ver reporte">

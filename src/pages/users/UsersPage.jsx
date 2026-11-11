@@ -37,8 +37,9 @@ import UserDetailModal from './UserDetailModal';
 import { getUsers, deactivateUser } from '../../services/users.service';
 import { useAuth } from '../../context/AuthContext';
 import StatCard from '../../components/ui/StatCard';
+import StatusBadge from '../../components/ui/StatusBadge';
 
-const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', accountant: 'accountant', cleaner: 'Cleaner / Gardener' };
+const ROLE_LABELS = { admin: 'Admin', manager: 'Manager', accountant: 'Contador', cleaner: 'Cleaner / Gardener' };
 const ROLE_COLORS = { admin: 'error', manager: 'warning', accountant: 'info', cleaner: 'success' };
 
 /**
@@ -149,7 +150,7 @@ export default function UsersPage() {
           >
             {row.nombre} {row.apellido}
           </Typography>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'none', letterSpacing: 0 }}>
             {row.email}
           </Typography>
         </Box>
@@ -195,11 +196,7 @@ export default function UsersPage() {
       field: 'rol',
       label: 'Rol',
       render: row => (
-        <Chip
-          label={ROLE_LABELS[row.rol] || row.rol}
-          color={ROLE_COLORS[row.rol] || 'default'}
-          size="small"
-        />
+        <StatusBadge tone={ROLE_COLORS[row.rol] || 'primary'} label={ROLE_LABELS[row.rol] || row.rol} />
       ),
     },
     {
@@ -233,12 +230,7 @@ export default function UsersPage() {
       field: 'activo',
       label: 'Estado',
       render: row => (
-        <Chip
-          label={row.activo ? 'Activo' : 'Inactivo'}
-          color={row.activo ? 'success' : 'default'}
-          size="small"
-          variant={row.activo ? 'filled' : 'outlined'}
-        />
+        <StatusBadge value={row.activo ? 'activo' : 'inactivo'} />
       ),
     },
     {
@@ -416,17 +408,8 @@ export default function UsersPage() {
                   </Typography>
                 </Box>
                 <Stack direction="row" spacing={0.5} sx={{ flexShrink: 0 }}>
-                  <Chip
-                    label={ROLE_LABELS[row.rol] || row.rol}
-                    color={ROLE_COLORS[row.rol] || 'default'}
-                    size="small"
-                  />
-                  <Chip
-                    label={row.activo ? 'Activo' : 'Inactivo'}
-                    color={row.activo ? 'success' : 'default'}
-                    size="small"
-                    variant={row.activo ? 'filled' : 'outlined'}
-                  />
+                  <StatusBadge tone={ROLE_COLORS[row.rol] || 'primary'} label={ROLE_LABELS[row.rol] || row.rol} />
+                  <StatusBadge value={row.activo ? 'activo' : 'inactivo'} />
                 </Stack>
               </Box>
 

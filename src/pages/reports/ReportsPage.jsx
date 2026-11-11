@@ -7,6 +7,7 @@ import DataTable from '../../components/ui/DataTable';
 import GenerateReportModal from './GenerateReportModal';
 import { getReports } from '../../services/reports.service';
 import { useAuth } from '../../context/AuthContext';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 export default function ReportsPage() {
   const navigate = useNavigate();
@@ -61,8 +62,7 @@ export default function ReportsPage() {
     {
       field: 'estado', label: 'Estado',
       render: row => {
-        const { label, color } = estadoChip(row);
-        return <Chip label={label} color={color} size="small" />;
+        return <StatusBadge value={row.estado || 'Enviado'} label={estadoChip(row).label} />;
       },
     },
     {
@@ -93,7 +93,7 @@ export default function ReportsPage() {
           <Stack spacing={1}>
             <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
               <Typography variant="body2" fontWeight={700}>{buildTitle(row)}</Typography>
-              <Chip label={chip.label} color={chip.color} size="small" sx={{ flexShrink: 0 }} />
+              <StatusBadge value={row.estado || 'Enviado'} label={chip.label} />
             </Box>
             <Typography variant="caption" color="text.secondary">
               Generado: {new Date(row.created_at).toLocaleDateString()}

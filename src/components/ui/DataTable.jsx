@@ -82,7 +82,7 @@ export default function DataTable({
               </TableRow>
             ))
           ) : rows.length === 0 ? (
-            <TableRow>
+            <TableRow hover={false} sx={{ '&:hover': { bgcolor: 'transparent' } }}>
               <TableCell colSpan={columns.length} sx={{ p: 0, border: 0 }}>
                 <EmptyState message={emptyMessage} />
               </TableCell>

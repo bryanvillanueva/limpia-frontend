@@ -191,7 +191,7 @@ export default function SitesPage() {
           <StatCard icon={<CheckCircle />} label="Activos" value={sites.filter(s => s.activo).length} color="success.main" />
         </Grid>
         <Grid size={{ xs: 6, sm: 4 }}>
-          <StatCard icon={<Cancel />} label="Inactivos" value={sites.filter(s => !s.activo).length} color="error.main" />
+          <StatCard icon={<Cancel />} label="Inactivos" value={sites.filter(s => !s.activo).length} color="text.disabled" />
         </Grid>
       </Grid>
 

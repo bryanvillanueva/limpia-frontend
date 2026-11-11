@@ -58,7 +58,7 @@ export default function ToolsPage() {
     {
       field: 'code',
       label: 'Código',
-      render: (row) => row.code || '—',
+      render: (row) => <Typography variant="body2" sx={{ whiteSpace: 'nowrap' }}>{row.code || '—'}</Typography>,
     },
     {
       field: 'nombre',

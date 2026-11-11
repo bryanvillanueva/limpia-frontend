@@ -127,7 +127,7 @@ export default function TeamsPage() {
       field: 'numero',
       label: 'Equipo',
       render: row => (
-        <Typography variant="body2" fontWeight={600}>{row.numero}</Typography>
+        <Typography variant="body2" fontWeight={600}>{/^\d+$/.test(String(row.numero)) ? `Equipo ${row.numero}` : row.numero}</Typography>
       ),
     },
     {
@@ -285,7 +285,7 @@ export default function TeamsPage() {
           return (
             <Stack spacing={1}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                <Typography variant="body2" fontWeight={700}>Equipo {row.numero}</Typography>
+                <Typography variant="body2" fontWeight={700}>{/^\d+$/.test(String(row.numero)) ? `Equipo ${row.numero}` : row.numero}</Typography>
                 <StatusBadge value={row.activo ? 'activo' : 'inactivo'} />
               </Box>
               <Divider />

@@ -211,7 +211,7 @@ export default function ClientsPage() {
 
       {/* Stat cards */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 6, sm: 4 }}>
+        <Grid size={{ xs: 6, md: 3 }}>
           <StatCard
             icon={<Business />}
             label="Total clientes"

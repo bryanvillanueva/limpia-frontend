@@ -109,7 +109,7 @@ export default function SuppliesPage() {
     { field: 'descripcion', label: 'Descripción' },
     { field: 'unidad', label: 'Unidad' },
     {
-      field: 'precio_unitario', label: 'Precio unit.',
+      field: 'precio_unitario', label: 'Precio',
       render: row => formatPrice(row.precio_unitario),
     },
     {
@@ -128,8 +128,9 @@ export default function SuppliesPage() {
     }] : []),
   ];
 
-  const lowStock = supplies.filter(s => s.stock_minimo != null && s.stock_minimo > 0 && (s.stock_actual ?? 0) <= s.stock_minimo).length;
-  const outOfStock = supplies.filter(s => (s.stock_actual ?? 0) === 0).length;
+  const tracked = supplies.filter(s => s.stock_minimo != null && s.stock_minimo > 0);
+  const lowStock = tracked.filter(s => (s.stock_actual ?? 0) > 0 && (s.stock_actual ?? 0) <= s.stock_minimo).length;
+  const outOfStock = tracked.filter(s => (s.stock_actual ?? 0) === 0).length;
 
   return (
     <>
@@ -141,6 +142,15 @@ export default function SuppliesPage() {
             Nuevo insumo
           </Button>
         )}
+      />
+
+      <StatsRow
+        loading={loading}
+        items={[
+          { icon: <Inventory2 />, label: 'Total de insumos', value: supplies.length },
+          { icon: <Warning />, label: 'Stock bajo', value: lowStock, tone: lowStock > 0 ? 'warning' : 'primary', highlight: lowStock > 0 },
+          { icon: <RemoveShoppingCart />, label: 'Sin stock', value: outOfStock, tone: outOfStock > 0 ? 'error' : 'primary', highlight: outOfStock > 0 },
+        ]}
       />
 
       {/* Sticky search bar */}
@@ -181,14 +191,6 @@ export default function SuppliesPage() {
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
-      <StatsRow
-        loading={loading}
-        items={[
-          { icon: <Inventory2 />, label: 'Total de insumos', value: supplies.length },
-          { icon: <Warning />, label: 'Stock bajo', value: lowStock, tone: lowStock > 0 ? 'warning' : 'primary', highlight: lowStock > 0 },
-          { icon: <RemoveShoppingCart />, label: 'Sin stock', value: outOfStock, tone: outOfStock > 0 ? 'error' : 'primary', highlight: outOfStock > 0 },
-        ]}
-      />
 
       <DataTable
         columns={columns}

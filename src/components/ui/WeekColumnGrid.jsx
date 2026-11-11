@@ -321,11 +321,11 @@ export default function WeekColumnGrid({
               </Typography>
               <Typography
                 variant="caption"
-                color={isMobile ? 'primary.main' : 'text.secondary'}
-                fontWeight={isMobile ? 700 : 400}
-                sx={{ fontSize: { xs: '0.75rem', md: '0.6rem' } }}
+                color={total > 0 ? 'primary.main' : 'text.disabled'}
+                fontWeight={700}
+                sx={{ fontSize: { xs: '0.75rem', md: '0.7rem' } }}
               >
-                {isMobile ? (total > 0 ? `${total.toFixed(2)}h` : '—') : 'TIEMPO'}
+                {total > 0 ? `${total.toFixed(2)}h` : '—'}
               </Typography>
             </Box>
 

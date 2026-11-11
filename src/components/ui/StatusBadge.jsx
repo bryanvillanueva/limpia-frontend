@@ -1,6 +1,6 @@
 import { Chip, alpha } from '@mui/material';
 
-// tone: palette key, 'neutral' (grey) or a custom hex color
+// tone: palette key ('success', 'warning', ...), 'neutral' (grey) or a custom hex color
 const STATUS_MAP = {
   activo:        { label: 'Activo',        tone: 'success' },
   inactivo:      { label: 'Inactivo',      tone: 'neutral' },
@@ -17,14 +17,27 @@ const STATUS_MAP = {
   mantenimiento: { label: 'Mantenimiento', tone: 'error' },
   oficina:       { label: 'Oficina',       tone: 'info' },
   asignada:      { label: 'Asignada',      tone: '#7b1fa2' },
+  // Reports
+  borrador:      { label: 'Borrador',      tone: 'neutral' },
+  enviado:       { label: 'Enviado',       tone: 'warning' },
+  pagado:        { label: 'Pagado',        tone: 'success' },
+  devuelto:      { label: 'Devuelto',      tone: 'error' },
+  eliminado:     { label: 'Eliminado',     tone: 'neutral' },
 };
 
 /**
- * Status chip. Colors come from the theme (tinted background + readable text),
+ * Status/role chip. Colors come from the theme (tinted background + readable text),
  * so it looks right in both light and dark mode.
+ *
+ * @param {string} [value] - Known status key (case-insensitive), e.g. 'activo', 'Enviado'.
+ * @param {string} [label] - Overrides the displayed text.
+ * @param {string} [tone]  - Use a tone directly instead of a status key (e.g. for roles).
  */
-export default function StatusBadge({ value, size = 'small' }) {
-  const cfg = STATUS_MAP[value] || { label: value, tone: 'neutral' };
+export default function StatusBadge({ value, label, tone, size = 'small' }) {
+  const known = STATUS_MAP[value] || STATUS_MAP[String(value ?? '').toLowerCase()];
+  const cfg = tone
+    ? { label: label ?? value, tone }
+    : { label: label ?? known?.label ?? value, tone: known?.tone ?? 'neutral' };
 
   return (
     <Chip
@@ -34,7 +47,7 @@ export default function StatusBadge({ value, size = 'small' }) {
         const dark = theme.palette.mode === 'dark';
         let base;
         let text;
-        if (cfg.tone === 'neutral') {
+        if (cfg.tone === 'neutral' || !theme.palette[cfg.tone] && !cfg.tone.startsWith('#')) {
           base = theme.palette.text.secondary;
           text = theme.palette.text.secondary;
         } else if (cfg.tone.startsWith('#')) {
