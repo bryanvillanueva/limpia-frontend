@@ -1,5 +1,5 @@
 import {
-  AppBar, Toolbar, IconButton, Typography, Box, Tooltip, Avatar, alpha,
+  AppBar, Toolbar, IconButton, Typography, Box, Tooltip, Avatar, ButtonBase, alpha,
 } from '@mui/material';
 import { Brightness4, Brightness7, Logout, Menu } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
@@ -76,10 +76,14 @@ export default function Topbar({ onMenuClick }) {
             </IconButton>
           </Tooltip>
 
-          <Box
+          {/* The user chip opens the profile */}
+          <ButtonBase
+            onClick={() => navigate('/perfil')}
+            aria-label="Mi perfil"
             sx={{
-              display: 'flex', alignItems: 'center', gap: 1.5,
+              display: 'flex', alignItems: 'center', gap: 1.5, textAlign: 'left',
               bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
+              '&:hover': { bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1) },
               borderRadius: 2,
               py: 0.5, px: { xs: 0.5, sm: 1.5 },
               ml: 0.5,
@@ -101,7 +105,7 @@ export default function Topbar({ onMenuClick }) {
                 {ROLE_LABELS[user?.rol] || user?.rol}
               </Typography>
             </Box>
-          </Box>
+          </ButtonBase>
 
           <Tooltip title="Cerrar sesión">
             <IconButton onClick={handleLogout} size="small" aria-label="Cerrar sesión" sx={{ color: 'text.secondary' }}>

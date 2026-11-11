@@ -7,7 +7,7 @@ import {
   People, Groups, Business, LocationOn, Inventory,
   ShoppingCart, Build, DirectionsCar, BeachAccess,
   BarChart, Warning, Dashboard, Home, CalendarMonth, Assignment,
-  ExpandLess, ExpandMore, EditNote,
+  ExpandLess, ExpandMore, EditNote, AccountCircle,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
@@ -40,6 +40,7 @@ const NAV_ITEMS = [
   },
   { label: 'Quejas',         path: '/quejas',        icon: <Warning />,       roles: ['admin','manager'] },
   { label: 'Reportes',       path: '/reportes',      icon: <BarChart />,      roles: ['admin','accountant'] },
+  { label: 'Mi Perfil',      path: '/perfil',        icon: <AccountCircle />, roles: ['admin','manager','accountant','cleaner'] },
 ];
 
 export default function Sidebar({ open, onClose, variant = 'permanent' }) {

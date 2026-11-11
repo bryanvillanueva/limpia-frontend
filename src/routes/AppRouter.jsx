@@ -27,6 +27,7 @@ import ReportsPage from '../pages/reports/ReportsPage';
 import ReportDetailPage from '../pages/reports/ReportDetailPage';
 import ComplaintsPage from '../pages/complaints/ComplaintsPage';
 import PlannerPage from '../pages/planner/PlannerPage';
+import ProfilePage from '../pages/profile/ProfilePage';
 
 const ADMIN_MANAGER   = ['admin', 'manager'];
 const ADMIN_ONLY      = ['admin'];
@@ -76,6 +77,7 @@ export default function AppRouter() {
             <Route element={<ProtectedRoute roles={ALL_AUTH} />}>
               <Route path="/sitios/:id" element={<SiteDetailPage />} />
               <Route path="/planner" element={<PlannerPage />} />
+              <Route path="/perfil" element={<ProfilePage />} />
             </Route>
 
             {/* Admin + Accountant */}
