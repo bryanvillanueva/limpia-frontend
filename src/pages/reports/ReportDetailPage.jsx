@@ -6,9 +6,11 @@ import {
   alpha, TextField, InputAdornment, MenuItem, Dialog, DialogTitle,
   DialogContent, DialogActions, Snackbar,
 } from '@mui/material';
-import { ArrowBack, CheckCircle, FileDownload, Search, Email } from '@mui/icons-material';
+import { ArrowBack, CheckCircle, FileDownload, Search, Email, Assignment, Person, AccessTime, LocationOn } from '@mui/icons-material';
 import { getReportById, updateReportStatus, exportExcel, sendReportEmail } from '../../services/reports.service';
 import { useAuth } from '../../context/AuthContext';
+import DetailHeader from '../../components/ui/DetailHeader';
+import StatsRow from '../../components/ui/StatsRow';
 
 const ESTADO_CHIP = {
   Borrador:  { label: 'Borrador',  color: 'default' },
@@ -409,41 +411,49 @@ export default function ReportDetailPage() {
   return (
     <>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-        <IconButton onClick={() => navigate(backPath)}><ArrowBack /></IconButton>
-        <Box sx={{ flex: 1, minWidth: 200 }}>
-          <Typography variant="h6" fontWeight={700}>{reportTitle}</Typography>
-        </Box>
-        <Chip
-          label={estadoChip.label}
-          color={estadoChip.color}
-          icon={estadoKey === 'Pagado' ? <CheckCircle /> : undefined}
-        />
-        {report.invoice_reference_number && (
-          <Chip label={report.invoice_reference_number} size="small" variant="outlined" />
+      <DetailHeader
+        onBack={() => navigate(backPath)}
+        icon={<Assignment />}
+        title={reportTitle}
+        chips={(
+          <>
+            <Chip
+              label={estadoChip.label}
+              color={estadoChip.color}
+              size="small"
+              icon={estadoKey === 'Pagado' ? <CheckCircle /> : undefined}
+            />
+            {report.invoice_reference_number && (
+              <Chip label={report.invoice_reference_number} size="small" variant="outlined" />
+            )}
+          </>
         )}
-        {canChangeStatus && (
-          <Button variant="contained" onClick={openStatusDialog}>
-            Cambiar estado
-          </Button>
+        action={(
+          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', '& > button': { flex: { xs: '1 1 auto', sm: 'none' } } }}>
+            {canChangeStatus && (
+              <Button variant="contained" onClick={openStatusDialog}>
+                Cambiar estado
+              </Button>
+            )}
+            <Button
+              variant="outlined"
+              startIcon={<Email />}
+              onClick={handleSendEmail}
+              disabled={emailing}
+            >
+              {emailing ? 'Enviando...' : 'Enviar por email'}
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<FileDownload />}
+              onClick={handleExport}
+              disabled={exporting}
+            >
+              {exporting ? 'Exportando...' : 'Excel'}
+            </Button>
+          </Box>
         )}
-        <Button
-          variant="outlined"
-          startIcon={<FileDownload />}
-          onClick={handleExport}
-          disabled={exporting}
-        >
-          {exporting ? 'Exportando...' : 'Excel'}
-        </Button>
-        <Button
-          variant="outlined"
-          startIcon={<Email />}
-          onClick={handleSendEmail}
-          disabled={emailing}
-        >
-          {emailing ? 'Enviando...' : 'Enviar por email'}
-        </Button>
-      </Box>
+      />
 
       {/* Status change dialog */}
       <Dialog open={statusDialog} onClose={() => setStatusDialog(false)} maxWidth="xs" fullWidth>
@@ -495,30 +505,15 @@ export default function ReportDetailPage() {
         </Alert>
       </Snackbar>
 
-      {/* Summary bar */}
+      {/* Summary */}
       {summary && (
-        <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, p: 2, mb: 2 }}>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, alignItems: 'center' }}>
-            {summary.nombre && (
-              <Box>
-                <Typography variant="caption" color="text.secondary">Limpiador</Typography>
-                <Typography variant="body1" fontWeight={600}>
-                  {summary.nombre} {summary.apellido || ''}
-                </Typography>
-              </Box>
-            )}
-            <Box>
-              <Typography variant="caption" color="text.secondary">Total horas</Typography>
-              <Typography variant="body1" fontWeight={700} color="primary.main">
-                {fmtVal(computed?.grandTotal) || '0'}
-              </Typography>
-            </Box>
-            <Box>
-              <Typography variant="caption" color="text.secondary">Sitios</Typography>
-              <Typography variant="body1" fontWeight={600}>{computed?.sites?.length || 0}</Typography>
-            </Box>
-          </Box>
-        </Paper>
+        <StatsRow
+          items={[
+            summary.nombre ? { icon: <Person />, label: 'Limpiador', value: `${summary.nombre} ${summary.apellido || ''}`.trim() } : null,
+            { icon: <AccessTime />, label: 'Total de horas', value: fmtVal(computed?.grandTotal) || '0', tone: 'success' },
+            { icon: <LocationOn />, label: 'Sitios', value: computed?.sites?.length || 0, tone: 'info' },
+          ]}
+        />
       )}
 
       {/* Week tables stacked */}

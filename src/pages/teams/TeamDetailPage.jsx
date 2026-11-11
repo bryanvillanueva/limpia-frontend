@@ -18,6 +18,8 @@ import { getUsers } from '../../services/users.service';
 import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../../components/ui/StatusBadge';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import DetailHeader from '../../components/ui/DetailHeader';
+import SectionHeader from '../../components/ui/SectionHeader';
 
 export default function TeamDetailPage() {
   const { id } = useParams();
@@ -146,22 +148,13 @@ export default function TeamDetailPage() {
   return (
     <>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
-        <IconButton onClick={() => navigate('/equipos')} sx={{ mt: 0.5 }}>
-          <ArrowBack />
-        </IconButton>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-            <Typography variant="h5" fontWeight={700}>
-              {team.numero}
-            </Typography>
-            <StatusBadge value={team.activo ? 'activo' : 'inactivo'} />
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            {members.length}/2 miembros &middot; {portfolio.length} sitios asignados &middot; {cars.length} vehículos &middot; {tools.length} herramientas
-          </Typography>
-        </Box>
-      </Box>
+      <DetailHeader
+        onBack={() => navigate('/equipos')}
+        icon={<Groups />}
+        title={`Equipo ${team.numero}`}
+        chips={<StatusBadge value={team.activo ? 'activo' : 'inactivo'} />}
+        subtitle={<>{members.length}/2 miembros &middot; {portfolio.length} sitios asignados &middot; {cars.length} vehículos &middot; {tools.length} herramientas</>}
+      />
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>
@@ -171,17 +164,12 @@ export default function TeamDetailPage() {
         {/* Members section */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, height: '100%' }}>
-            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Person fontSize="small" color="primary" />
-              <Typography variant="subtitle2" fontWeight={700} sx={{ flex: 1 }}>
-                Miembros ({members.length}/2)
-              </Typography>
-              {isAdmin && members.length < 2 && (
+            <SectionHeader icon={<Person />} title={<>Miembros ({members.length}/2)</>}
+                action={isAdmin && members.length < 2 && (
                 <Button size="small" startIcon={<Add />} onClick={handleOpenAddMember} sx={{ textTransform: 'none' }}>
                   Agregar
                 </Button>
-              )}
-            </Box>
+              )} />
             <Box sx={{ p: 2 }}>
               {members.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>
@@ -267,12 +255,7 @@ export default function TeamDetailPage() {
         {/* Vehicles section */}
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, height: '100%' }}>
-            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <DirectionsCar fontSize="small" color="primary" />
-              <Typography variant="subtitle2" fontWeight={700}>
-                Vehículos ({cars.length})
-              </Typography>
-            </Box>
+            <SectionHeader icon={<DirectionsCar />} title={<>Vehículos ({cars.length})</>} />
             <Box sx={{ p: 2 }}>
               {cars.length === 0 ? (
                 <Typography variant="body2" color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>

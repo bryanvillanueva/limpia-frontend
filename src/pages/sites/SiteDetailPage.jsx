@@ -17,6 +17,7 @@ import { useAuth } from '../../context/AuthContext';
 import StatusBadge from '../../components/ui/StatusBadge';
 import SiteMap from '../../components/ui/SiteMap';
 import AssignmentFormModal from './AssignmentFormModal';
+import DetailHeader from '../../components/ui/DetailHeader';
 
 /**
  * TabPanel - Renderiza contenido condicionalmente según el tab activo.
@@ -210,30 +211,20 @@ export default function SiteDetailPage() {
   return (
     <>
       {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
-        <IconButton onClick={() => navigate(backPath)} sx={{ mt: 0.5 }}>
-          <ArrowBack />
-        </IconButton>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-            <Typography variant="h5" fontWeight={700} noWrap sx={{ minWidth: 0 }}>
-              {site.direccion_linea1}
-            </Typography>
-            <StatusBadge value={site.activo ? 'activo' : 'inactivo'} />
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            {[site.suburb, site.state, site.postcode, site.country].filter(Boolean).join(', ')}
-          </Typography>
-        </Box>
-        {!isCleaner && site.cliente_nombre && (
+      <DetailHeader
+        onBack={() => navigate(backPath)}
+        icon={<LocationOn />}
+        title={site.direccion_linea1}
+        chips={<StatusBadge value={site.activo ? 'activo' : 'inactivo'} />}
+        subtitle={[site.suburb, site.state, site.postcode, site.country].filter(Boolean).join(', ')}
+        action={!isCleaner && site.cliente_nombre && (
           <Chip
             icon={<Business sx={{ fontSize: 16 }} />}
             label={site.cliente_nombre}
             variant="outlined"
-            sx={{ flexShrink: 0 }}
           />
         )}
-      </Box>
+      />
 
       {/* Alerts */}
       {error && (

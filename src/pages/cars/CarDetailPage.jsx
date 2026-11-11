@@ -19,6 +19,8 @@ import { getTeamById } from '../../services/teams.service';
 import { useAuth } from '../../context/AuthContext';
 import CarFormModal from './CarFormModal';
 import CarServiceFormModal from './CarServiceFormModal';
+import DetailHeader from '../../components/ui/DetailHeader';
+import SectionHeader from '../../components/ui/SectionHeader';
 
 /**
  * Formats an ISO / date string to a short localised date.
@@ -127,24 +129,16 @@ export default function CarDetailPage() {
   return (
     <>
       {/* ===== Header ===== */}
-      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2, mb: 3 }}>
-        <IconButton onClick={() => navigate('/vehiculos')} sx={{ mt: 0.5 }}>
-          <ArrowBack />
-        </IconButton>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
-            <DirectionsCar color="primary" />
-            <Typography variant="h5" fontWeight={700}>{car.matricula}</Typography>
-            {car.tipo && <Chip label={car.tipo} size="small" variant="outlined" />}
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            {carTitle || 'Sin detalles de marca/modelo'}
-            {equipoNumero && ` · Equipo ${equipoNumero}`}
-          </Typography>
-        </Box>
-        {isAdmin && (
+      <DetailHeader
+        onBack={() => navigate('/vehiculos')}
+        icon={<DirectionsCar />}
+        title={car.matricula}
+        chips={car.tipo ? <Chip label={car.tipo} size="small" variant="outlined" /> : null}
+        subtitle={`${carTitle || 'Sin detalles de marca/modelo'}${equipoNumero ? ` · Equipo ${equipoNumero}` : ''}`}
+        action={isAdmin && (
           <Button
             variant="outlined"
+            fullWidth
             startIcon={<Edit />}
             onClick={() => setEditOpen(true)}
             sx={{ whiteSpace: 'nowrap' }}
@@ -152,7 +146,7 @@ export default function CarDetailPage() {
             Editar
           </Button>
         )}
-      </Box>
+      />
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
@@ -164,10 +158,7 @@ export default function CarDetailPage() {
             elevation={0}
             sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, height: '100%' }}
           >
-            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <DirectionsCar fontSize="small" color="primary" />
-              <Typography variant="subtitle2" fontWeight={700}>Información del vehículo</Typography>
-            </Box>
+            <SectionHeader icon={<DirectionsCar />} title={"Información del vehículo"} />
             <Box sx={{ p: 2 }}>
               <InfoRow icon={DirectionsCar} label="Matrícula" value={car.matricula} />
               <Divider />
@@ -201,10 +192,7 @@ export default function CarDetailPage() {
             elevation={0}
             sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, height: '100%' }}
           >
-            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Build fontSize="small" color="primary" />
-              <Typography variant="subtitle2" fontWeight={700}>Mantenimiento y seguro</Typography>
-            </Box>
+            <SectionHeader icon={<Build />} title={"Mantenimiento y seguro"} />
             <Box sx={{ p: 2 }}>
               <InfoRow icon={CalendarMonth} label="Próximo mantenimiento" value={fmtDate(car.proximo_mantenimiento_fecha)} />
               <Divider />
