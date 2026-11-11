@@ -29,3 +29,20 @@ export function getCycleWeek(date = new Date()) {
   const idx = (((CYCLE_ANCHOR_WEEK - 1 + diffWeeks) % CYCLE_LENGTH) + CYCLE_LENGTH) % CYCLE_LENGTH;
   return idx + 1;
 }
+
+/**
+ * Monday that starts the 2-week report period containing `date`.
+ * Reports cover cycle weeks 1+2 or weeks 3+4, so a date in week 2 or 4 belongs to the period
+ * that started the Monday before (e.g. in week 4 the period began on week 3's Monday).
+ */
+export function getReportPeriodStart(date = new Date()) {
+  const monday = mondayOf(date);
+  if (getCycleWeek(monday) % 2 === 0) monday.setDate(monday.getDate() - 7);
+  return monday;
+}
+
+/** True when `date` is a Monday that can start a report period (cycle week 1 or 3). */
+export function isReportPeriodStart(date) {
+  const d = new Date(date);
+  return d.getDay() === 1 && getCycleWeek(d) % 2 === 1;
+}

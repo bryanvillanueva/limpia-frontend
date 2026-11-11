@@ -1,57 +1,70 @@
 import { useState, useMemo } from 'react';
 import {
-  Box, Typography, Button, TextField, DialogActions, Alert,
+  Box, Typography, Button, DialogActions, Alert, Chip,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import FormModal from '../../components/ui/FormModal';
 import { generateReport } from '../../services/reports.service';
 import DateField from '../../components/ui/DateField';
+import { getCycleWeek, getReportPeriodStart, isReportPeriodStart } from '../../utils/cycle';
 
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function getMonday(date) {
-  const d = new Date(date);
-  const day = d.getDay();
-  d.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
-  d.setHours(0, 0, 0, 0);
-  return d;
+function parseDate(str) {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
+const addDays = (date, n) => {
+  const d = new Date(date);
+  d.setDate(d.getDate() + n);
+  return d;
+};
+
+const fmtShort = (d) => d.toLocaleDateString('es-CL', { day: 'numeric', month: 'short' });
+const fmtLong = (d) => d.toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+/**
+ * Generates the report of one 2-week period. Periods follow the internal 4-week cycle:
+ * weeks 1+2 or weeks 3+4, so the start can only be the Monday of a week 1 or a week 3.
+ * By default it proposes the period that contains the week being viewed (in week 4 that is
+ * the period that started the Monday before, not this week's Monday).
+ * The report is created as a draft; it is reviewed and sent from its own page.
+ */
 export default function GenerateLogReportModal({ open, onClose, currentWeekStart }) {
   const navigate = useNavigate();
-  const defaultStart = currentWeekStart ? formatDate(getMonday(currentWeekStart)) : '';
+  const defaultStart = formatDate(getReportPeriodStart(currentWeekStart || new Date()));
 
   const [startDate, setStartDate] = useState(defaultStart);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Recalculate default when modal opens with new week
+  // Recalculate default when the viewed week changes
   const [lastDefault, setLastDefault] = useState(defaultStart);
   if (defaultStart !== lastDefault) {
     setStartDate(defaultStart);
     setLastDefault(defaultStart);
   }
 
-  // Auto-calculate end date: Sunday of second week = startMonday + 13 days
-  const endDate = useMemo(() => {
-    if (!startDate) return '';
-    const [y, m, d] = startDate.split('-').map(Number);
-    const monday = new Date(y, m - 1, d);
-    const sunday = new Date(monday);
-    sunday.setDate(sunday.getDate() + 13);
-    return formatDate(sunday);
-  }, [startDate]);
+  // Current period and the previous one, as quick picks
+  const quickPicks = useMemo(() => {
+    const current = getReportPeriodStart(new Date());
+    return [
+      { key: 'current', label: 'Período actual', start: current },
+      { key: 'previous', label: 'Período anterior', start: addDays(current, -14) },
+    ].map((p) => ({ ...p, value: formatDate(p.start), range: `${fmtShort(p.start)} – ${fmtShort(addDays(p.start, 13))}` }));
+  }, []);
 
-  const endLabel = useMemo(() => {
-    if (!endDate) return '';
-    const [y, m, d] = endDate.split('-').map(Number);
-    return new Date(y, m - 1, d).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  }, [endDate]);
+  const start = startDate ? parseDate(startDate) : null;
+  const validStart = !!start && isReportPeriodStart(start);
+  const end = validStart ? addDays(start, 13) : null; // Sunday of the second week
+  const endDate = end ? formatDate(end) : '';
+  const firstWeek = validStart ? getCycleWeek(start) : null;
 
   const handleSubmit = async () => {
-    if (!startDate || !endDate) { setError('Selecciona la fecha de inicio'); return; }
+    if (!validStart) { setError('El período debe empezar un lunes de semana 1 o semana 3 del ciclo'); return; }
     setSaving(true);
     setError('');
     try {
@@ -71,8 +84,21 @@ export default function GenerateLogReportModal({ open, onClose, currentWeekStart
         {error && <Alert severity="error">{error}</Alert>}
 
         <Typography variant="body2" color="text.secondary">
-          Selecciona el lunes de la primera semana. El reporte cubrira 2 semanas completas (lunes a domingo).
+          Cada reporte cubre un período de 2 semanas del ciclo: semanas 1 y 2, o semanas 3 y 4.
         </Typography>
+
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {quickPicks.map((p) => (
+            <Chip
+              key={p.key}
+              label={`${p.label} · ${p.range}`}
+              clickable
+              color={startDate === p.value ? 'primary' : 'default'}
+              variant={startDate === p.value ? 'filled' : 'outlined'}
+              onClick={() => { setStartDate(p.value); setError(''); }}
+            />
+          ))}
+        </Box>
 
         <DateField
           label="Lunes de inicio"
@@ -80,25 +106,28 @@ export default function GenerateLogReportModal({ open, onClose, currentWeekStart
           onChange={(e) => { setStartDate(e.target.value); setError(''); }}
           required
           fullWidth
-          slotProps={{ inputLabel: { shrink: true } }}
+          // Only the Mondays that start a period (cycle week 1 or 3) can be picked
+          shouldDisableDate={(d) => !isReportPeriodStart(d.toDate())}
+          error={!!startDate && !validStart}
+          helperText={!!startDate && !validStart ? 'Elige un lunes de semana 1 o semana 3 del ciclo' : undefined}
         />
 
-        {endDate && (
+        {validStart && (
           <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 2 }}>
             <Typography variant="body2" color="text.secondary">
-              Periodo del reporte:
+              Semanas {firstWeek} y {firstWeek + 1} del ciclo
             </Typography>
             <Typography variant="body1" fontWeight={600}>
-              {startDate} — {endDate}
+              {fmtShort(start)} — {fmtShort(end)} de {end.getFullYear()}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
-              Hasta el {endLabel}
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'none', letterSpacing: 0 }}>
+              Hasta el {fmtLong(end)}
             </Typography>
           </Box>
         )}
 
-        <Typography variant="caption" color="text.secondary">
-          Solo se incluiran los logs que tengan datos registrados en estas 2 semanas. Se crea como borrador: lo revisas y lo envias despues.
+        <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'none', letterSpacing: 0 }}>
+          Solo se incluirán los logs que tengan datos registrados en estas 2 semanas. Se crea como borrador: lo revisas y lo envías después.
         </Typography>
 
         <DialogActions sx={{ px: 0, pb: 0 }}>
@@ -106,7 +135,7 @@ export default function GenerateLogReportModal({ open, onClose, currentWeekStart
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={saving || !startDate}
+            disabled={saving || !validStart}
           >
             {saving ? 'Generando...' : 'Generar reporte'}
           </Button>

@@ -12,6 +12,8 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
  * Accepts the same `slotProps.htmlInput.min/max` the old TextField used, so call sites
  * only had to change the tag.
  *
+ * `shouldDisableDate(dayjsDate) => boolean` greys out the days that cannot be picked.
+ *
  * On touch devices the picker opens as a full dialog; with a mouse it opens as a popover.
  */
 export default function DateField({
@@ -28,6 +30,7 @@ export default function DateField({
   min,
   max,
   slotProps,
+  shouldDisableDate,
   sx,
 }) {
   const minDate = min ?? slotProps?.htmlInput?.min;
@@ -44,6 +47,7 @@ export default function DateField({
       maxDate={maxDate ? dayjs(maxDate) : undefined}
       disabled={disabled}
       showDaysOutsideCurrentMonth
+      shouldDisableDate={shouldDisableDate}
       slotProps={{
         textField: { size, fullWidth, required, error, helperText, name, sx },
         actionBar: { actions: ['today'] },
