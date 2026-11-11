@@ -5,6 +5,7 @@ import { Brightness4, Brightness7, Logout, Menu } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useThemeMode } from '../../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import NotificationBell from './NotificationBell';
 
 const DRAWER_WIDTH = 260;
 
@@ -67,6 +68,8 @@ export default function Topbar({ onMenuClick }) {
         <Box sx={{ flexGrow: 1 }} />
 
         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+          <NotificationBell />
+
           <Tooltip title={mode === 'dark' ? 'Modo claro' : 'Modo oscuro'}>
             <IconButton onClick={toggleMode} size="small" aria-label="Cambiar tema" sx={{ color: 'text.secondary' }}>
               {mode === 'dark' ? <Brightness7 fontSize="small" /> : <Brightness4 fontSize="small" />}

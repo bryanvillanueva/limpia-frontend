@@ -4,17 +4,19 @@ import {
   Paper, Typography, IconButton, Alert, Button, Tooltip, Skeleton,
   ToggleButton, ToggleButtonGroup, Chip, alpha, Fab, useMediaQuery, useTheme,
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
-  List, ListItemButton, ListItemText, Snackbar,
+  Snackbar,
 } from '@mui/material';
 import {
   Add, ChevronLeft, ChevronRight, CalendarMonth, EventNote,
-  ViewWeek, ViewDay, Sync, Assessment,
+  ViewWeek, ViewDay, Share, Assessment,
 } from '@mui/icons-material';
 import PageHeader from '../../components/ui/PageHeader';
 import EmptyState from '../../components/ui/EmptyState';
 import LogFormModal from './LogFormModal';
 import GenerateLogReportModal from './GenerateLogReportModal';
-import { getMyLogs, importFromTeammate } from '../../services/logs.service';
+import { getMyLogs } from '../../services/logs.service';
+import ShareLogsDialog from './ShareLogsDialog';
+import { LOGS_CHANGED_EVENT } from '../../components/layout/NotificationBell';
 import { getMyTeam, getWeekPlan, getTeamSites } from '../../services/planner.service';
 import { getCycleWeek } from '../../utils/cycle';
 
@@ -151,10 +153,9 @@ export default function MisSitiosPage() {
   // Generate report modal
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
-  // Teammate sync state (manual: the user triggers it with the "Sincronizar logs" button)
-  const [syncing, setSyncing] = useState(false);
-  const [syncResult, setSyncResult] = useState(null); // { severity, message }
-  const [teammatePicker, setTeammatePicker] = useState(null); // teammates[] when the team has several
+  // Sharing logs with another cleaner (they get a notification and decide whether to accept)
+  const [shareOpen, setShareOpen] = useState(false);
+  const [notice, setNotice] = useState(null); // { severity, message }
 
   // Monday of the current display week
   const weekStart = useMemo(() => getMonday(new Date(), weekOffset), [weekOffset]);
@@ -264,49 +265,11 @@ export default function MisSitiosPage() {
 
   useEffect(() => { loadLogs(); }, [loadLogs]);
 
-  /**
-   * Copies the teammate's logs for the displayed week into the user's own logs.
-   * Only creates missing logs — existing ones are never overwritten.
-   * @param {number} [sourceUserId] - Required only when the team has several teammates.
-   */
-  const handleSync = async (sourceUserId) => {
-    setSyncing(true);
-    setTeammatePicker(null);
-    setSyncResult(null);
-    try {
-      const result = await importFromTeammate({
-        ...(sourceUserId ? { source_user_id: sourceUserId } : {}),
-        fecha_inicio: formatDate(weekDates[0]),
-        fecha_fin: formatDate(weekDates[6]),
-        overwrite_existing: false,
-        dry_run: false,
-      });
-      const { created = 0, skipped_existing = 0, source_logs_total = 0 } = result.summary || {};
-      const mate = result.source_user ? result.source_user.nombre : 'tu compañero';
-
-      if (created > 0) {
-        setSyncResult({
-          severity: 'success',
-          message: `Se sincronizaron ${created} log${created !== 1 ? 's' : ''} de ${mate}`
-            + (skipped_existing > 0 ? ` (${skipped_existing} ya los tenías)` : ''),
-        });
-        loadLogs();
-      } else if (source_logs_total === 0) {
-        setSyncResult({ severity: 'info', message: `${mate} aún no tiene logs en esta semana` });
-      } else {
-        setSyncResult({ severity: 'info', message: 'Ya estás al día: no hay logs nuevos para sincronizar' });
-      }
-    } catch (err) {
-      const data = err.response?.data;
-      if (err.response?.status === 400 && Array.isArray(data?.teammates)) {
-        setTeammatePicker(data.teammates); // several teammates → ask which one
-      } else {
-        setSyncResult({ severity: 'error', message: data?.message || 'No se pudo sincronizar los logs' });
-      }
-    } finally {
-      setSyncing(false);
-    }
-  };
+  // Reload when logs change outside this page (e.g. accepting a shared week from the notifications bell)
+  useEffect(() => {
+    window.addEventListener(LOGS_CHANGED_EVENT, loadLogs);
+    return () => window.removeEventListener(LOGS_CHANGED_EVENT, loadLogs);
+  }, [loadLogs]);
 
   // Build grid rows: merge planner sites + logged sites
   const gridRows = useMemo(() => {
@@ -451,14 +414,12 @@ export default function MisSitiosPage() {
         subtitle={team ? `Equipo ${team.team_numero ?? team.team_id}` : 'Cargando equipo...'}
         action={
           <Box sx={{ display: 'flex', gap: 1, '& > button': { flex: { xs: 1, sm: 'none' } } }}>
-            <Button
-              variant="outlined"
-              startIcon={syncing ? <CircularProgress size={16} /> : <Sync />}
-              onClick={() => handleSync()}
-              disabled={syncing}
-            >
-              {syncing ? 'Sincronizando...' : 'Sincronizar logs'}
-            </Button>
+            {/* Only offered once there is something to share */}
+            {logs.length > 0 && (
+              <Button variant="outlined" startIcon={<Share />} onClick={() => setShareOpen(true)}>
+                Compartir logs
+              </Button>
+            )}
             <Button variant="outlined" startIcon={<Assessment />} onClick={() => setReportModalOpen(true)}>
               Generar reporte
             </Button>
@@ -932,34 +893,28 @@ export default function MisSitiosPage() {
         </Fab>
       )}
 
-      {/* Teammate picker — only shown when the team has more than one teammate */}
-      <Dialog open={!!teammatePicker} onClose={() => setTeammatePicker(null)} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontWeight: 700 }}>¿De quién sincronizar?</DialogTitle>
-        <DialogContent sx={{ px: 1 }}>
-          <List>
-            {(teammatePicker || []).map(m => (
-              <ListItemButton key={m.id} onClick={() => handleSync(m.id)}>
-                <ListItemText primary={`${m.nombre} ${m.apellido || ''}`.trim()} />
-              </ListItemButton>
-            ))}
-          </List>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setTeammatePicker(null)}>Cancelar</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Share logs with a teammate or anyone else */}
+      <ShareLogsDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        fechaInicio={formatDate(weekDates[0])}
+        fechaFin={formatDate(weekDates[6])}
+        weekLabel={weekLabel}
+        logCount={logs.length}
+        onSent={(message) => setNotice({ severity: 'success', message })}
+      />
 
-      {/* Sync result */}
+      {/* Feedback */}
       <Snackbar
-        open={!!syncResult}
+        open={!!notice}
         autoHideDuration={6000}
-        onClose={(_, reason) => { if (reason !== 'clickaway') setSyncResult(null); }}
+        onClose={(_, reason) => { if (reason !== 'clickaway') setNotice(null); }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         sx={{ bottom: { xs: 'calc(88px + env(safe-area-inset-bottom))', md: 24 } }}
       >
-        {syncResult ? (
-          <Alert severity={syncResult.severity} variant="filled" onClose={() => setSyncResult(null)} sx={{ width: '100%' }}>
-            {syncResult.message}
+        {notice ? (
+          <Alert severity={notice.severity} variant="filled" onClose={() => setNotice(null)} sx={{ width: '100%' }}>
+            {notice.message}
           </Alert>
         ) : undefined}
       </Snackbar>
