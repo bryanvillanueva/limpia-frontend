@@ -4,10 +4,10 @@ import {
   Box, Typography, IconButton, Button, Alert, Paper, Chip,
   Table, TableHead, TableBody, TableRow, TableCell, TableContainer,
   alpha, TextField, InputAdornment, MenuItem, Dialog, DialogTitle,
-  DialogContent, DialogActions,
+  DialogContent, DialogActions, Snackbar,
 } from '@mui/material';
-import { ArrowBack, CheckCircle, FileDownload, Search } from '@mui/icons-material';
-import { getReportById, updateReportStatus, exportExcel } from '../../services/reports.service';
+import { ArrowBack, CheckCircle, FileDownload, Search, Email } from '@mui/icons-material';
+import { getReportById, updateReportStatus, exportExcel, sendReportEmail } from '../../services/reports.service';
 import { useAuth } from '../../context/AuthContext';
 
 const ESTADO_CHIP = {
@@ -274,6 +274,8 @@ export default function ReportDetailPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [emailing, setEmailing] = useState(false);
+  const [notice, setNotice] = useState('');
   const [siteSearch1, setSiteSearch1] = useState('');
   const [siteSearch2, setSiteSearch2] = useState('');
   const [statusDialog, setStatusDialog] = useState(false);
@@ -312,6 +314,18 @@ export default function ReportDetailPage() {
     try { await exportExcel(id); }
     catch { setError('Error al exportar Excel'); }
     finally { setExporting(false); }
+  };
+
+  const handleSendEmail = async () => {
+    setEmailing(true);
+    try {
+      const { to } = await sendReportEmail(id);
+      setNotice(`Reporte enviado por email a ${to}`);
+    } catch (err) {
+      setError(err.response?.data?.message || 'No se pudo enviar el email');
+    } finally {
+      setEmailing(false);
+    }
   };
 
   // Derive week dates, day totals, and grand total from the data
@@ -421,6 +435,14 @@ export default function ReportDetailPage() {
         >
           {exporting ? 'Exportando...' : 'Excel'}
         </Button>
+        <Button
+          variant="outlined"
+          startIcon={<Email />}
+          onClick={handleSendEmail}
+          disabled={emailing}
+        >
+          {emailing ? 'Enviando...' : 'Enviar por email'}
+        </Button>
       </Box>
 
       {/* Status change dialog */}
@@ -461,6 +483,17 @@ export default function ReportDetailPage() {
       </Dialog>
 
       {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+
+      <Snackbar
+        open={!!notice}
+        autoHideDuration={6000}
+        onClose={(_, reason) => { if (reason !== 'clickaway') setNotice(''); }}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setNotice('')} sx={{ width: '100%' }}>
+          {notice}
+        </Alert>
+      </Snackbar>
 
       {/* Summary bar */}
       {summary && (

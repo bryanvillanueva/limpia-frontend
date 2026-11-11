@@ -6,6 +6,8 @@ export const generateReport = (data) => apiClient.post('/reports/generate', data
 export const updateReportStatus = (id, data) => apiClient.put(`/reports/${id}/status`, data).then(r => r.data);
 export const getCycle = (date) => apiClient.get('/reports/cycle', { params: date ? { date } : undefined }).then(r => r.data);
 export const getPeriodLogs = (params) => apiClient.get('/reports/period-logs', { params }).then(r => r.data);
+/** Emails the report (Excel attached) to the admin address. Returns { sent, to }. */
+export const sendReportEmail = (id) => apiClient.post(`/reports/${id}/send-email`).then(r => r.data);
 export const getMyReports = () => apiClient.get('/reports/my-reports').then(r => r.data);
 
 export const exportExcel = (id) =>
