@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Box, Typography, Paper, Grid, alpha, Skeleton, Chip, ButtonBase,
-  List, ListItem, ListItemIcon, ListItemText,
 } from '@mui/material';
 import {
   People, Groups, LocationOn, Inventory,
@@ -254,21 +253,29 @@ function CleanerStats({ stats, navigate }) {
             <Chip label={sitesToday.length} size="small" color="primary" sx={{ ml: 'auto' }} />
           </Box>
           {sitesToday.length > 0 ? (
-            <List dense disablePadding>
-              {sitesToday.map((site) => (
-                <ListItem key={site.site_id} disablePadding sx={{ py: 0.5 }}>
-                  <ListItemIcon sx={{ minWidth: 32 }}>
-                    <LocationOn fontSize="small" color="action" />
-                  </ListItemIcon>
-                  <ListItemText
-                    primary={site.nombre}
-                    secondary={site.horas ? `${site.horas}h` : null}
-                    primaryTypographyProps={{ variant: 'body2', fontWeight: 600 }}
-                    secondaryTypographyProps={{ variant: 'caption' }}
-                  />
-                </ListItem>
+            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+              {sitesToday.map((site, i) => (
+                <Box
+                  key={site.site_id}
+                  sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.25, borderTop: i > 0 ? '1px solid' : 'none', borderColor: 'divider' }}
+                >
+                  <Box
+                    sx={{
+                      width: 36, height: 36, borderRadius: 2, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      bgcolor: (t) => alpha(t.palette.primary.main, 0.1),
+                      color: 'primary.main',
+                    }}
+                  >
+                    <LocationOn fontSize="small" />
+                  </Box>
+                  <Typography variant="body2" fontWeight={600} sx={{ flex: 1, minWidth: 0 }}>
+                    {site.nombre}
+                  </Typography>
+                  {site.horas ? <Chip label={`${site.horas} h`} size="small" variant="outlined" /> : null}
+                </Box>
               ))}
-            </List>
+            </Box>
           ) : (
             <Typography variant="body2" color="text.secondary">
               No tienes sitios asignados para hoy

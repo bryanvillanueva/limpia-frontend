@@ -3,11 +3,13 @@ import {
   IconButton, Tooltip, Alert, Box, Typography,
   Paper, TextField, InputAdornment, Chip, Stack,
 } from '@mui/material';
-import { Visibility, Search, LocationOn, Schedule, AccessTime } from '@mui/icons-material';
+import { Visibility, Search, LocationOn, Schedule, AccessTime, DeleteOutline, EventRepeat } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
 import DataTable from '../../components/ui/DataTable';
 import { getMySites } from '../../services/sites.service';
+import StatsRow from '../../components/ui/StatsRow';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 /**
  * MySitesPage — Shows the cleaner's team-assigned sites in a searchable table.
@@ -77,7 +79,7 @@ export default function MySitesPage() {
       field: 'frecuencia',
       label: 'Frecuencia',
       render: row => row.frecuencia
-        ? <Chip label={row.frecuencia} size="small" variant="outlined" icon={<Schedule sx={{ fontSize: 14 }} />} />
+        ? <StatusBadge tone="info" label={row.frecuencia} />
         : '—',
     },
     {
@@ -96,7 +98,7 @@ export default function MySitesPage() {
       field: 'hace_bins',
       label: 'Bins',
       render: row => row.hace_bins
-        ? <Chip label={row.pago_bins != null ? `$${row.pago_bins}` : 'Sí'} size="small" color="success" />
+        ? <StatusBadge tone="success" label={row.pago_bins != null ? `$${row.pago_bins}` : 'Sí'} />
         : '—',
     },
     {
@@ -115,17 +117,21 @@ export default function MySitesPage() {
 
   return (
     <>
-      <PageHeader title="Mis Sitios" />
+      <PageHeader
+        title="Mis Sitios"
+        subtitle={loading ? undefined : `${sites.length} ${sites.length === 1 ? 'sitio asignado' : 'sitios asignados'} a tu equipo`}
+      />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-      {!loading && sites.length > 0 && (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <LocationOn color="primary" sx={{ fontSize: 20 }} />
-          <Typography variant="body2" color="text.secondary">
-            {sites.length} {sites.length === 1 ? 'sitio asignado' : 'sitios asignados'} a tu equipo
-          </Typography>
-        </Box>
-      )}
+      <StatsRow
+        loading={loading}
+        items={[
+          { icon: <LocationOn />, label: 'Sitios asignados', value: sites.length },
+          { icon: <EventRepeat />, label: 'Visitas semanales', value: sites.filter(s => /semanal/i.test(s.frecuencia || '')).length, tone: 'info' },
+          { icon: <DeleteOutline />, label: 'Con bins', value: sites.filter(s => s.hace_bins).length, tone: 'success' },
+        ]}
+      />
+
 
       <Paper
         elevation={0}
@@ -182,13 +188,13 @@ export default function MySitesPage() {
             </Box>
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
               {row.frecuencia && (
-                <Chip label={row.frecuencia} size="small" variant="outlined" icon={<Schedule sx={{ fontSize: 14 }} />} />
+                <StatusBadge tone="info" label={row.frecuencia} />
               )}
               {row.horas_por_trabajador != null && (
                 <Chip label={`${row.horas_por_trabajador}h`} size="small" variant="outlined" icon={<AccessTime sx={{ fontSize: 14 }} />} />
               )}
               {row.hace_bins && (
-                <Chip label={row.pago_bins != null ? `Bins $${row.pago_bins}` : 'Bins'} size="small" color="success" />
+                <StatusBadge tone="success" label={row.pago_bins != null ? `Bins $${row.pago_bins}` : 'Bins'} />
               )}
             </Stack>
           </Stack>

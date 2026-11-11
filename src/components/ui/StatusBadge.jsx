@@ -8,6 +8,7 @@ const STATUS_MAP = {
   aprobado:      { label: 'Aprobado',      tone: 'success' },
   rechazado:     { label: 'Rechazado',     tone: 'error' },
   resuelto:      { label: 'Resuelto',      tone: 'success' },
+  confirmado:    { label: 'Confirmado',    tone: 'success' },
   completado:    { label: 'Completado',    tone: 'info' },
   abierto:       { label: 'Abierto',       tone: 'error' },
   en_proceso:    { label: 'En proceso',    tone: 'warning' },

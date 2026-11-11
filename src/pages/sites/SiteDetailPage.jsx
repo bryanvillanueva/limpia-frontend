@@ -3,13 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Box, Typography, Tabs, Tab, Paper, IconButton, Button,
   TextField, Alert, List, ListItem, ListItemText, Divider,
-  Chip, Grid, Skeleton, Avatar,
+  Chip, Grid, Skeleton, Avatar, alpha,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
 } from '@mui/material';
-import {
-  ArrowBack, LocationOn, Business, Assignment, AttachMoney,
-  Groups, Send, History, Comment, Map, Public, Edit as EditIcon, Add,
-} from '@mui/icons-material';
+import { ArrowBack, LocationOn, Business, Assignment, AttachMoney, Groups, Send, History, Comment, Map, Public, Edit as EditIcon, Add, CleaningServices, DeleteOutline, Tune, AccessTime } from '@mui/icons-material';
 import { getSiteById, getSiteComments, addSiteComment, getSiteLogs, getSiteAssignments } from '../../services/sites.service';
 import { getMyLogs } from '../../services/logs.service';
 import { getTeams } from '../../services/teams.service';
@@ -18,6 +15,95 @@ import StatusBadge from '../../components/ui/StatusBadge';
 import SiteMap from '../../components/ui/SiteMap';
 import AssignmentFormModal from './AssignmentFormModal';
 import DetailHeader from '../../components/ui/DetailHeader';
+import StatsRow from '../../components/ui/StatsRow';
+
+const ENTRY_META = {
+  SERVICE: { label: 'Service', tone: 'success', icon: <CleaningServices fontSize="small" /> },
+  BINS:    { label: 'Bins',    tone: 'info',    icon: <DeleteOutline fontSize="small" /> },
+  CUSTOM:  { label: 'Otro',    tone: 'warning', icon: <Tune fontSize="small" /> },
+};
+
+const trimNumber = (n) => Number(n).toFixed(2).replace(/\.?0+$/, '') || '0';
+
+/** Value of a log: hours for SERVICE, money for BINS, free number for CUSTOM. */
+function logValue(l) {
+  const v = Number(l.display_value ?? l.horas_trabajadas ?? 0);
+  if (l.entry_type === 'BINS') return `$${v.toFixed(2)}`;
+  if (l.entry_type === 'CUSTOM') return trimNumber(v);
+  return `${trimNumber(v)} h`;
+}
+
+function fmtLogDate(raw) {
+  const [y, m, d] = String(raw || '').slice(0, 10).split('-').map(Number);
+  if (!y) return '—';
+  return new Date(y, m - 1, d).toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/**
+ * Activity of a site: summary cards plus one row per log with its type, value,
+ * status, date, who did it (admin view) and the observations written at the time.
+ */
+function SiteLogHistory({ logs, showCleaner }) {
+  const type = (l) => l.entry_type || 'SERVICE';
+  const services = logs.filter((l) => type(l) === 'SERVICE');
+  const hours = services.reduce((s, l) => s + Number(l.display_value ?? l.horas_trabajadas ?? 0), 0);
+  const binsCount = logs.filter((l) => type(l) === 'BINS').length;
+
+  return (
+    <>
+      <StatsRow
+        items={[
+          { icon: <CleaningServices />, label: 'Visitas de servicio', value: services.length },
+          { icon: <AccessTime />, label: 'Horas registradas', value: trimNumber(hours), tone: 'success' },
+          { icon: <DeleteOutline />, label: 'Bins', value: binsCount, tone: 'info' },
+        ]}
+      />
+      <Box>
+        {logs.map((l, i) => {
+          const meta = ENTRY_META[type(l)] || ENTRY_META.SERVICE;
+          const who = [l.limpiador, l.limpiador_apellido].filter(Boolean).join(' ');
+          const details = [fmtLogDate(l.fecha || l.created_at), showCleaner && who, showCleaner && l.team_numero && `Equipo ${l.team_numero}`]
+            .filter(Boolean).join(' · ');
+          return (
+            <Box
+              key={l.id || i}
+              sx={{ display: 'flex', gap: 2, py: 1.75, borderTop: i > 0 ? '1px solid' : 'none', borderColor: 'divider' }}
+            >
+              <Box
+                sx={{
+                  width: 36, height: 36, borderRadius: 2, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  bgcolor: (t) => alpha(t.palette[meta.tone].main, 0.12),
+                  color: `${meta.tone}.main`,
+                }}
+              >
+                {meta.icon}
+              </Box>
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography variant="body2" fontWeight={700}>{meta.label}</Typography>
+                  <Typography variant="body2" fontWeight={700} color={`${meta.tone}.main`}>{logValue(l)}</Typography>
+                  <StatusBadge value={l.estado || 'pendiente'} />
+                </Box>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textTransform: 'none', letterSpacing: 0, mt: 0.25 }}>
+                  {details}
+                </Typography>
+                {l.observaciones && (
+                  <Typography
+                    variant="body2"
+                    sx={{ mt: 0.75, px: 1.25, py: 0.75, borderRadius: 1.5, bgcolor: 'action.hover', whiteSpace: 'pre-wrap' }}
+                  >
+                    {l.observaciones}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+    </>
+  );
+}
 
 /**
  * TabPanel - Renderiza contenido condicionalmente según el tab activo.
@@ -525,52 +611,7 @@ export default function SiteDetailPage() {
                 </Typography>
               </Paper>
             ) : (
-              <List disablePadding>
-                {logs.map((l, i) => (
-                  <Box key={l.id || i}>
-                    <ListItem sx={{ px: 0 }}>
-                      <Box
-                        sx={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          bgcolor: l.confirmado ? 'success.main' : 'warning.main',
-                          mr: 2,
-                          flexShrink: 0,
-                        }}
-                      />
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-                            <Typography variant="body2" fontWeight={600}>
-                              {l.accion || l.limpiador || 'Actividad'}
-                            </Typography>
-                            {l.confirmado && (
-                              <Chip label="Confirmado" size="small" color="success" />
-                            )}
-                          </Box>
-                        }
-                        secondary={
-                          <Box sx={{ mt: 0.5 }}>
-                            <Typography variant="caption" color="text.secondary">
-                              {formatDate(l.fecha || l.created_at)}
-                              {l.usuario && ` • ${l.usuario}`}
-                            </Typography>
-                            {(l.horas || l.bins || l.notas || l.detalles) && (
-                              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                                {l.horas && `Horas: ${l.horas}`}
-                                {l.bins && ` • Bins: ${l.bins}`}
-                                {(l.notas || l.detalles) && ` • ${l.notas || l.detalles}`}
-                              </Typography>
-                            )}
-                          </Box>
-                        }
-                      />
-                    </ListItem>
-                    {i < logs.length - 1 && <Divider sx={{ my: 1 }} />}
-                  </Box>
-                ))}
-              </List>
+              <SiteLogHistory logs={logs} showCleaner={!isCleaner} />
             )}
           </TabPanel>
         </Box>
