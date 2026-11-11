@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, ToggleButton, ToggleButtonGroup, TextField,
-  Typography, Box, Alert, Autocomplete, useMediaQuery, useTheme,
+  Typography, Box, Alert, Autocomplete, useMediaQuery, useTheme, alpha,
 } from '@mui/material';
-import { Delete } from '@mui/icons-material';
+import { Delete, AddLocationAlt } from '@mui/icons-material';
 import { createLog, updateLog, deleteLog } from '../../services/logs.service';
+import { searchSites, createQuickSite } from '../../services/sites.service';
+import DateField from '../../components/ui/DateField';
 
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -18,15 +20,25 @@ function parseDateLocal(str) {
 
 const DAY_NAMES_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
+const siteLabel = (s) =>
+  [s.direccion_linea1 || s.nombre, s.suburb].filter(Boolean).join(', ') || `Sitio ${s.site_id ?? s.id}`;
+
 /**
  * Modal dialog for creating, editing, or deleting a daily site log.
+ *
+ * Choosing the site (when none is pre-selected):
+ *  1. Sites assigned to the team (with their hours / bins rates).
+ *  2. Any other registered site, found through the server search. These have no rate for the team,
+ *     so the log is entered as "Otro" with the value typed by hand.
+ *  3. A site that is not registered at all: "Agregar «texto» como sitio nuevo" asks for the address,
+ *     creates it as a one-off site (an admin reviews it later) and logs against it as "Otro".
  *
  * @param {boolean}  open           - Dialog visibility.
  * @param {Function} onClose        - Close handler.
  * @param {Object}   [site]         - Pre-selected site ({ site_id, direccion_linea1, horas_por_trabajador, hace_bins, pago_bins }).
  * @param {string}   [fecha]        - Pre-filled date (YYYY-MM-DD).
  * @param {Object}   [plannerEntry] - Planner item for this cell ({ entry_type }).
- * @param {Array}    [teamSites]    - All available sites for manual selection.
+ * @param {Array}    [teamSites]    - Sites assigned to the team, for manual selection.
  * @param {Object}   [existingLog]  - If provided, modal opens in edit mode with this log's data.
  * @param {Function} onSaved        - Called after successful save or delete.
  */
@@ -45,6 +57,14 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState('');
 
+  // Site picker state
+  const [siteMode, setSiteMode] = useState('pick'); // 'pick' = search the lists, 'new' = type a new site
+  const [siteInput, setSiteInput] = useState('');
+  const [remoteSites, setRemoteSites] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [newAddress, setNewAddress] = useState('');
+  const [newSuburb, setNewSuburb] = useState('');
+
   useEffect(() => {
     if (open) {
       if (existingLog) {
@@ -62,25 +82,80 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
       }
       setError('');
       setConfirmDelete(false);
+      setSiteMode('pick');
+      setSiteInput('');
+      setRemoteSites([]);
+      setNewAddress('');
+      setNewSuburb('');
     }
   }, [open, site, fecha, plannerEntry, existingLog]);
 
-  const effectiveSite = selectedSite;
+  const pickingSite = !site && !isEdit;
+
+  // Search the rest of the registered sites while the user types (debounced)
+  useEffect(() => {
+    const q = siteInput.trim();
+    if (!open || !pickingSite || siteMode !== 'pick' || q.length < 2) return undefined;
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const rows = await searchSites(q);
+        if (!cancelled) setRemoteSites(rows);
+      } catch {
+        if (!cancelled) setRemoteSites([]);
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [siteInput, open, pickingSite, siteMode]);
+
+  const assignedIds = useMemo(() => new Set((teamSites || []).map((s) => s.site_id ?? s.id)), [teamSites]);
+
+  const siteOptions = useMemo(() => {
+    const typed = siteInput.trim();
+    const q = typed.toLowerCase();
+    const matches = (s) => !q || [s.direccion_linea1, s.suburb].filter(Boolean).join(' ').toLowerCase().includes(q);
+
+    const mine = (teamSites || []).filter(matches);
+    const others = q.length >= 2
+      ? remoteSites
+        .filter((r) => !assignedIds.has(r.id))
+        .map((r) => ({
+          site_id: r.id, direccion_linea1: r.direccion_linea1, suburb: r.suburb,
+          hace_bins: 0, horas_por_trabajador: null, pago_bins: null, unassigned: true,
+        }))
+      : [];
+    const exact = [...mine, ...others].some((o) => siteLabel(o).toLowerCase() === q);
+    const create = typed.length >= 5 && !exact ? [{ __create: true, query: typed }] : [];
+    return [...mine, ...others, ...create];
+  }, [teamSites, remoteSites, siteInput, assignedIds]);
+
+  const isNewSite = pickingSite && siteMode === 'new';
+  const effectiveSite = useMemo(
+    () => (isNewSite ? { site_id: null, direccion_linea1: newAddress, unassigned: true } : selectedSite),
+    [isNewSite, newAddress, selectedSite],
+  );
+
+  // A site without a team assignment has no hourly rate or bins pay: the log is always "Otro" with a typed value
+  const isUnassigned = !isEdit && !!effectiveSite?.unassigned;
+  const effType = isUnassigned ? 'CUSTOM' : entryType;
   const canBins = effectiveSite?.hace_bins === 1;
-  const isCustom = entryType === 'CUSTOM';
+  const isCustom = effType === 'CUSTOM';
 
   const previewValue = useMemo(() => {
     if (!effectiveSite || isCustom) return null;
-    if (entryType === 'SERVICE') {
+    if (effType === 'SERVICE') {
       const h = effectiveSite.horas_por_trabajador;
       return h != null ? `${h}h por trabajador` : 'Sin horas asignadas';
     }
-    if (entryType === 'BINS') {
+    if (effType === 'BINS') {
       const p = effectiveSite.pago_bins;
       return p != null ? `$${Number(p).toFixed(2)} pago bins` : 'Sin pago bins asignado';
     }
     return null;
-  }, [effectiveSite, entryType, isCustom]);
+  }, [effectiveSite, effType, isCustom]);
 
   const dateLabel = useMemo(() => {
     if (!logDate) return '';
@@ -91,6 +166,10 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
 
   const handleSubmit = async () => {
     if (!effectiveSite) { setError('Seleccioná un sitio'); return; }
+    if (isNewSite && newAddress.trim().length < 5) {
+      setError('Escribí la dirección del sitio (mínimo 5 caracteres)');
+      return;
+    }
     if (isCustom && (customValue === '' || isNaN(Number(customValue)) || Number(customValue) < 0)) {
       setError('Ingresá un valor numérico >= 0');
       return;
@@ -98,10 +177,20 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
     setSaving(true);
     setError('');
     try {
+      let siteId = effectiveSite.site_id ?? effectiveSite.id;
+      if (isNewSite) {
+        // If the same address already exists the server returns that site instead of duplicating it
+        const created = await createQuickSite({
+          direccion_linea1: newAddress.trim(),
+          suburb: newSuburb.trim() || undefined,
+        });
+        siteId = created.id;
+      }
+
       const payload = {
-        site_id: effectiveSite.site_id ?? effectiveSite.id,
+        site_id: siteId,
         fecha: logDate,
-        entry_type: entryType,
+        entry_type: effType,
         observaciones: observaciones.trim() || undefined,
       };
       if (isCustom) payload.display_value = Number(customValue);
@@ -138,8 +227,10 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
     }
   };
 
-  const siteLabel = (s) =>
-    [s.direccion_linea1 || s.nombre, s.suburb].filter(Boolean).join(', ') || `Sitio ${s.site_id ?? s.id}`;
+  const groupOf = (o) => {
+    if (o.__create) return 'Sitio nuevo';
+    return o.unassigned ? 'Otros sitios registrados' : 'Sitios de tu equipo';
+  };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={fullScreen}>
@@ -149,20 +240,98 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
         {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
 
-        {/* Site selector — only when no site pre-selected and creating */}
-        {!site && !isEdit && teamSites && (
+        {/* Site picker — only when no site pre-selected and creating */}
+        {pickingSite && siteMode === 'pick' && (
           <Autocomplete
             value={selectedSite}
+            inputValue={siteInput}
+            onInputChange={(_, v) => setSiteInput(v)}
             onChange={(_, val) => {
+              if (val?.__create) {
+                setNewAddress(val.query);
+                setNewSuburb('');
+                setSelectedSite(null);
+                setSiteMode('new');
+                return;
+              }
               setSelectedSite(val);
               if (val && !val.hace_bins && entryType === 'BINS') setEntryType('SERVICE');
             }}
-            options={teamSites}
-            getOptionLabel={siteLabel}
+            options={siteOptions}
+            filterOptions={(x) => x}
+            groupBy={groupOf}
+            getOptionLabel={(o) => (o.__create ? o.query : siteLabel(o))}
             isOptionEqualToValue={(opt, val) => (opt.site_id ?? opt.id) === (val.site_id ?? val.id)}
-            renderInput={(params) => <TextField {...params} label="Sitio" size="small" />}
-            noOptionsText="No hay sitios disponibles"
+            loading={searching}
+            loadingText="Buscando sitios…"
+            noOptionsText="Escribí la dirección del sitio"
+            renderOption={(props, option) => {
+              const { key, ...rest } = props;
+              if (option.__create) {
+                return (
+                  <Box component="li" key={key} {...rest} sx={{ gap: 1, color: 'primary.main', fontWeight: 600 }}>
+                    <AddLocationAlt fontSize="small" />
+                    Agregar «{option.query}» como sitio nuevo
+                  </Box>
+                );
+              }
+              return <li key={key} {...rest}>{siteLabel(option)}</li>;
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Sitio"
+                size="small"
+                placeholder="Buscá o escribí la dirección"
+                helperText="Si no está en la lista podés agregarlo escribiendo su dirección"
+              />
+            )}
           />
+        )}
+
+        {/* New (unregistered) site typed by hand */}
+        {isNewSite && (
+          <Box
+            sx={{
+              p: 2, borderRadius: 2, display: 'flex', flexDirection: 'column', gap: 1.5,
+              border: '1px dashed', borderColor: 'primary.main',
+              bgcolor: (t) => alpha(t.palette.primary.main, 0.05),
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Typography variant="subtitle2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                <AddLocationAlt fontSize="small" color="primary" /> Sitio nuevo
+              </Typography>
+              <Button
+                size="small"
+                onClick={() => { setSiteMode('pick'); setSiteInput(newAddress); }}
+                sx={{ textTransform: 'none' }}
+              >
+                Buscar en la lista
+              </Button>
+            </Box>
+            <TextField
+              label="Dirección"
+              value={newAddress}
+              onChange={(e) => setNewAddress(e.target.value)}
+              size="small"
+              required
+              fullWidth
+              autoFocus
+              slotProps={{ htmlInput: { maxLength: 255 } }}
+            />
+            <TextField
+              label="Suburb / ciudad (opcional)"
+              value={newSuburb}
+              onChange={(e) => setNewSuburb(e.target.value)}
+              size="small"
+              fullWidth
+              slotProps={{ htmlInput: { maxLength: 100 } }}
+            />
+            <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'none', letterSpacing: 0 }}>
+              Se agrega como sitio nuevo y un administrador lo revisará.
+            </Typography>
+          </Box>
         )}
 
         {/* Site name (when pre-selected or editing) */}
@@ -183,12 +352,11 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
               {dateLabel}
             </Typography>
           </Box>
-          <TextField
-            type="date"
+          <DateField
             value={logDate}
             onChange={(e) => setLogDate(e.target.value)}
             size="small"
-            sx={{ width: { xs: '100%', sm: 160 } }}
+            sx={{ width: { xs: '100%', sm: 180 } }}
           />
         </Box>
 
@@ -199,18 +367,24 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
           </Typography>
           <ToggleButtonGroup
             exclusive
-            value={entryType}
+            value={effType}
             onChange={(_, val) => { if (val) { setEntryType(val); if (val !== 'CUSTOM') setCustomValue(''); } }}
             size="small"
             fullWidth
           >
-            <ToggleButton value="SERVICE" sx={{ textTransform: 'none', fontWeight: 600 }}>Service</ToggleButton>
-            <ToggleButton value="BINS" disabled={!canBins} sx={{ textTransform: 'none', fontWeight: 600 }}>
-              Bins{!canBins && effectiveSite ? ' (N/A)' : ''}
+            <ToggleButton value="SERVICE" disabled={isUnassigned} sx={{ textTransform: 'none', fontWeight: 600 }}>Service</ToggleButton>
+            <ToggleButton value="BINS" disabled={isUnassigned || !canBins} sx={{ textTransform: 'none', fontWeight: 600 }}>
+              Bins{!canBins && effectiveSite && !isUnassigned ? ' (N/A)' : ''}
             </ToggleButton>
             <ToggleButton value="CUSTOM" sx={{ textTransform: 'none', fontWeight: 600 }}>Otro</ToggleButton>
           </ToggleButtonGroup>
         </Box>
+
+        {isUnassigned && (
+          <Alert severity="info" sx={{ py: 0.5 }}>
+            Este sitio no está asignado a tu equipo, así que no tiene una tarifa definida. Ingresá vos el valor (horas trabajadas).
+          </Alert>
+        )}
 
         {/* Value preview */}
         {previewValue && (
@@ -223,7 +397,7 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
         {/* Custom value */}
         {isCustom && (
           <TextField
-            label="Valor personalizado"
+            label={isUnassigned ? 'Horas trabajadas' : 'Valor personalizado'}
             value={customValue}
             onChange={(e) => setCustomValue(e.target.value)}
             type="number"

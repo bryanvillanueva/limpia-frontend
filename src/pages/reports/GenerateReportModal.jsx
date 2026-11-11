@@ -3,6 +3,7 @@ import { DialogActions, Button, TextField, MenuItem, Grid, Alert } from '@mui/ma
 import FormModal from '../../components/ui/FormModal';
 import { generateReport } from '../../services/reports.service';
 import { getUsers } from '../../services/users.service';
+import DateField from '../../components/ui/DateField';
 
 const EMPTY = { fecha_inicio: '', fecha_fin: '', user_id: '' };
 
@@ -45,10 +46,10 @@ export default function GenerateReportModal({ open, onClose, onGenerated }) {
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           {error && <Grid size={12}><Alert severity="error">{error}</Alert></Grid>}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField label="Fecha inicio" type="date" value={form.fecha_inicio} onChange={set('fecha_inicio')} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField label="Fecha inicio" value={form.fecha_inicio} onChange={set('fecha_inicio')} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField label="Fecha fin" type="date" value={form.fecha_fin} onChange={set('fecha_fin')} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
+            <DateField label="Fecha fin" value={form.fecha_fin} onChange={set('fecha_fin')} required fullWidth slotProps={{ inputLabel: { shrink: true } }} />
           </Grid>
           <Grid size={12}>
             <TextField select label="Limpiador (opcional)" value={form.user_id} onChange={set('user_id')} fullWidth>

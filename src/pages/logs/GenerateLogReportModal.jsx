@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import FormModal from '../../components/ui/FormModal';
 import { generateReport } from '../../services/reports.service';
+import DateField from '../../components/ui/DateField';
 
 function formatDate(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -73,9 +74,8 @@ export default function GenerateLogReportModal({ open, onClose, currentWeekStart
           Selecciona el lunes de la primera semana. El reporte cubrira 2 semanas completas (lunes a domingo).
         </Typography>
 
-        <TextField
+        <DateField
           label="Lunes de inicio"
-          type="date"
           value={startDate}
           onChange={(e) => { setStartDate(e.target.value); setError(''); }}
           required

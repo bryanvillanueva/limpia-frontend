@@ -23,6 +23,7 @@ import {
 } from '@mui/icons-material';
 import FormModal from '../../components/ui/FormModal';
 import { createUser, updateUser } from '../../services/users.service';
+import DateField from '../../components/ui/DateField';
 
 const ROLES = ['admin', 'manager', 'accountant', 'cleaner'];
 const ROLE_LABELS = { admin: 'Administrador', manager: 'Manager', accountant: 'Contador', cleaner: 'Limpiador' };
@@ -287,9 +288,8 @@ export default function UserFormModal({ open, onClose, user, onSaved }) {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
+            <DateField
               label="Fecha vencimiento visa"
-              type="date"
               value={form.fecha_vencimiento_visa}
               onChange={set('fecha_vencimiento_visa')}
               fullWidth

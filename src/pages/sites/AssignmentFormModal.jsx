@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import FormModal from '../../components/ui/FormModal';
 import { assignTeamToSite } from '../../services/sites.service';
+import DateField from '../../components/ui/DateField';
 
 const FRECUENCIAS = [
   'Diariamente',
@@ -137,9 +138,8 @@ export default function AssignmentFormModal({ open, onClose, siteId, teams, assi
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
+            <DateField
               label="Fecha de asignación"
-              type="date"
               value={form.fecha_asignacion}
               onChange={set('fecha_asignacion')}
               fullWidth

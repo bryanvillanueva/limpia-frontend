@@ -22,6 +22,7 @@ import {
   createSite, updateSite, assignTeamToSite,
   removeTeamFromSite, getSiteAssignments,
 } from '../../services/sites.service';
+import DateField from '../../components/ui/DateField';
 
 const FRECUENCIAS = [
   'Diariamente',
@@ -352,9 +353,8 @@ export default function SiteFormModal({ open, onClose, site, clients, teams = []
                           />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 4 }}>
-                          <TextField
+                          <DateField
                             label="Fecha asignación"
-                            type="date"
                             value={a.fecha_asignacion}
                             onChange={(e) => updateAssignment(idx, 'fecha_asignacion', e.target.value)}
                             fullWidth

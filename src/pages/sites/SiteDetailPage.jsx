@@ -301,7 +301,12 @@ export default function SiteDetailPage() {
         onBack={() => navigate(backPath)}
         icon={<LocationOn />}
         title={site.direccion_linea1}
-        chips={<StatusBadge value={site.activo ? 'activo' : 'inactivo'} />}
+        chips={(
+          <>
+            <StatusBadge value={site.activo ? 'activo' : 'inactivo'} />
+            {!!site.ocasional && <StatusBadge tone="warning" label="Puntual · por revisar" />}
+          </>
+        )}
         subtitle={[site.suburb, site.state, site.postcode, site.country].filter(Boolean).join(', ')}
         action={!isCleaner && site.cliente_nombre && (
           <Chip

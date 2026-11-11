@@ -10,6 +10,7 @@ import { DialogActions, Button, TextField, MenuItem, Grid, Alert } from '@mui/ma
 import FormModal from '../../components/ui/FormModal';
 import { createCar, updateCar } from '../../services/cars.service';
 import { getTeams } from '../../services/teams.service';
+import DateField from '../../components/ui/DateField';
 
 const TIPOS = ['Sedan', 'SUV', 'Van', 'Ute', 'Truck', 'Otro'];
 
@@ -180,9 +181,8 @@ export default function CarFormModal({ open, onClose, car, onSaved }) {
 
           {/* Row 4: Próximo mantenimiento + Fecha Rego */}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
+            <DateField
               label="Próximo mantenimiento"
-              type="date"
               value={form.proximo_mantenimiento_fecha}
               onChange={set('proximo_mantenimiento_fecha')}
               fullWidth
@@ -190,9 +190,8 @@ export default function CarFormModal({ open, onClose, car, onSaved }) {
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
+            <DateField
               label="Fecha Rego"
-              type="date"
               value={form.fecha_rego}
               onChange={set('fecha_rego')}
               fullWidth

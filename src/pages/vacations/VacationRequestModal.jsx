@@ -3,6 +3,7 @@ import { DialogActions, Button, TextField, Grid, Alert, Box, Typography, alpha }
 import { BeachAccess } from '@mui/icons-material';
 import FormModal from '../../components/ui/FormModal';
 import { createVacation } from '../../services/vacations.service';
+import DateField from '../../components/ui/DateField';
 
 const EMPTY = { fecha_inicio: '', fecha_fin: '', motivo: '' };
 
@@ -57,15 +58,15 @@ export default function VacationRequestModal({ open, onClose, onSaved }) {
         <Grid container spacing={2} sx={{ mt: 0.5 }}>
           {error && <Grid size={12}><Alert severity="error">{error}</Alert></Grid>}
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
-              label="Fecha inicio" type="date" value={form.fecha_inicio} onChange={set('fecha_inicio')}
+            <DateField
+              label="Fecha inicio" value={form.fecha_inicio} onChange={set('fecha_inicio')}
               required fullWidth
               slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: todayStr } }}
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
-              label="Fecha fin" type="date" value={form.fecha_fin} onChange={set('fecha_fin')}
+            <DateField
+              label="Fecha fin" value={form.fecha_fin} onChange={set('fecha_fin')}
               required fullWidth error={!!range?.invalid}
               slotProps={{ inputLabel: { shrink: true }, htmlInput: { min: form.fecha_inicio || todayStr } }}
             />

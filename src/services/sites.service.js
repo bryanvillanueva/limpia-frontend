@@ -20,6 +20,16 @@ export const getSiteComments = (id) => apiClient.get(`/sites/${id}/comments`).th
 export const addSiteComment = (id, comentario) => apiClient.post(`/sites/${id}/comments`, { comentario }).then(r => r.data);
 export const getSiteLogs = (id) => apiClient.get(`/sites/${id}/logs`).then(r => r.data);
 
+/** Searches active sites by address, suburb or client (min. 2 characters, max 20 results). Any role. */
+export const searchSites = (q) => apiClient.get('/sites/search', { params: { q } }).then(r => r.data);
+
+/**
+ * A cleaner registers a site that does not exist yet by typing its address.
+ * Returns { id, direccion_linea1, suburb, existing } — existing=true when the site was already there.
+ * @param {{direccion_linea1: string, suburb?: string}} data
+ */
+export const createQuickSite = (data) => apiClient.post('/sites/quick', data).then(r => r.data);
+
 /**
  * Importa sitios desde un archivo CSV o XLSX.
  * Matching by direccion_linea1 + cliente_id: same data → update assignment only,

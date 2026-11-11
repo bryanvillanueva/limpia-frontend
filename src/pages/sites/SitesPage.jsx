@@ -99,9 +99,12 @@ export default function SitesPage() {
       label: 'Dirección',
       render: row => (
         <Box>
-          <Typography variant="body2" fontWeight={600}>
-            {row.direccion_linea1 || '—'}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="body2" fontWeight={600}>
+              {row.direccion_linea1 || '—'}
+            </Typography>
+            {!!row.ocasional && <StatusBadge tone="warning" label="Puntual" />}
+          </Box>
           {(row.suburb || row.state) && (
             <Typography variant="caption" color="text.secondary">
               {[row.suburb, row.state, row.postcode].filter(Boolean).join(', ')}
@@ -246,7 +249,7 @@ export default function SitesPage() {
             <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 1 }}>
               <Box sx={{ minWidth: 0 }}>
                 <Typography variant="body2" fontWeight={700}>
-                  {row.direccion_linea1 || '—'}
+                  {row.direccion_linea1 || '—'} {!!row.ocasional && <StatusBadge tone="warning" label="Puntual" />}
                 </Typography>
                 {(row.suburb || row.state) && (
                   <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>

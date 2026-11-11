@@ -5,7 +5,7 @@ import {
   Snackbar, Alert, alpha,
 } from '@mui/material';
 import {
-  Notifications, NotificationsNone, Share, CheckCircleOutline, HighlightOff, DoneAll, Assignment,
+  Notifications, NotificationsNone, Share, CheckCircleOutline, HighlightOff, DoneAll, Assignment, AddLocationAlt,
 } from '@mui/icons-material';
 import {
   getUnreadCount, getNotifications, markNotificationRead, markAllNotificationsRead,
@@ -22,11 +22,13 @@ const TYPE_ICON = {
   log_share_accepted: <CheckCircleOutline fontSize="small" />,
   log_share_rejected: <HighlightOff fontSize="small" />,
   report_submitted: <Assignment fontSize="small" />,
+  site_created: <AddLocationAlt fontSize="small" />,
 };
 
 // Notifications that open a page when tapped
 const NOTIFICATION_LINK = {
   report_submitted: (n) => `/reportes/${n.ref_id}`,
+  site_created: (n) => `/sitios/${n.ref_id}`,
 };
 
 const SHARE_STATUS_LABEL = {

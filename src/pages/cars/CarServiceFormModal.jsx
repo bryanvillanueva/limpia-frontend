@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { DialogActions, Button, TextField, Grid, Alert, InputAdornment } from '@mui/material';
 import FormModal from '../../components/ui/FormModal';
 import { createCarService } from '../../services/cars.service';
+import DateField from '../../components/ui/DateField';
 
 const EMPTY = {
   fecha_mantenimiento: '',
@@ -67,9 +68,8 @@ export default function CarServiceFormModal({ open, onClose, carId, onSaved }) {
           )}
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
+            <DateField
               label="Fecha de mantenimiento"
-              type="date"
               value={form.fecha_mantenimiento}
               onChange={set('fecha_mantenimiento')}
               required

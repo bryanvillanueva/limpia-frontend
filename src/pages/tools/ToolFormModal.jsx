@@ -19,6 +19,7 @@ import {
 import FormModal from '../../components/ui/FormModal';
 import { createTool, updateTool } from '../../services/tools.service';
 import { getTeams } from '../../services/teams.service';
+import DateField from '../../components/ui/DateField';
 
 const UBICACIONES = [
   { value: 'oficina', label: 'Oficina' },
@@ -177,9 +178,8 @@ export default function ToolFormModal({ open, onClose, tool, onSaved }) {
           </Grid>
 
           <Grid size={{ xs: 12, sm: 6 }}>
-            <TextField
+            <DateField
               label="Último mantenimiento"
-              type="date"
               value={form.fecha_ultimo_mantenimiento}
               onChange={set('fecha_ultimo_mantenimiento')}
               fullWidth
