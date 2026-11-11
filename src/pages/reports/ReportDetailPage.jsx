@@ -6,8 +6,8 @@ import {
   alpha, TextField, InputAdornment, MenuItem, Dialog, DialogTitle,
   DialogContent, DialogActions, Snackbar,
 } from '@mui/material';
-import { ArrowBack, CheckCircle, FileDownload, Search, Email, Assignment, Person, AccessTime, LocationOn } from '@mui/icons-material';
-import { getReportById, updateReportStatus, exportExcel, sendReportEmail } from '../../services/reports.service';
+import { ArrowBack, CheckCircle, FileDownload, Search, Email, Assignment, Person, AccessTime, LocationOn, Send, WarningAmber } from '@mui/icons-material';
+import { getReportById, updateReportStatus, exportExcel, sendReportEmail, submitReport } from '../../services/reports.service';
 import { useAuth } from '../../context/AuthContext';
 import DetailHeader from '../../components/ui/DetailHeader';
 import StatsRow from '../../components/ui/StatsRow';
@@ -278,6 +278,9 @@ export default function ReportDetailPage() {
   const [exporting, setExporting] = useState(false);
   const [emailing, setEmailing] = useState(false);
   const [notice, setNotice] = useState('');
+  const [noticeSeverity, setNoticeSeverity] = useState('success');
+  const [submitOpen, setSubmitOpen] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [siteSearch1, setSiteSearch1] = useState('');
   const [siteSearch2, setSiteSearch2] = useState('');
   const [statusDialog, setStatusDialog] = useState(false);
@@ -318,10 +321,34 @@ export default function ReportDetailPage() {
     finally { setExporting(false); }
   };
 
+  /** The author sends the draft to administration (after the confirmation dialog). */
+  const handleSubmitReport = async () => {
+    setSubmitting(true);
+    try {
+      const result = await submitReport(id);
+      setSubmitOpen(false);
+      if (result.email?.sent) {
+        setNoticeSeverity('success');
+        setNotice('Reporte enviado a administración y contabilidad');
+      } else {
+        // Saved and visible to administration in the app, only the email failed
+        setNoticeSeverity('warning');
+        setNotice('Reporte enviado. Administración lo verá en la app, pero el correo no pudo enviarse.');
+      }
+      load();
+    } catch (err) {
+      setSubmitOpen(false);
+      setError(err.response?.data?.message || 'No se pudo enviar el reporte');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleSendEmail = async () => {
     setEmailing(true);
     try {
       const { to } = await sendReportEmail(id);
+      setNoticeSeverity('success');
       setNotice(`Reporte enviado por email a ${to}`);
     } catch (err) {
       setError(err.response?.data?.message || 'No se pudo enviar el email');
@@ -389,6 +416,13 @@ export default function ReportDetailPage() {
     : chipData;
 
   // Build report title matching Excel filename format
+  // The author can send their own drafts (and reports returned for correction)
+  const canSubmit = user?.rol === 'cleaner'
+    && Number(report.user_id) === Number(user?.id)
+    && ['Borrador', 'Devuelto'].includes(report.estado);
+  // Only reports that were already sent can be re-emailed
+  const canEmail = ['Enviado', 'Pagado'].includes(report.estado);
+
   const reportTitle = (() => {
     const nombre = [report.generado_por, report.generado_por_apellido].filter(Boolean).join(' ')
       || summary?.nombre || '';
@@ -430,19 +464,26 @@ export default function ReportDetailPage() {
         )}
         action={(
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', '& > button': { flex: { xs: '1 1 auto', sm: 'none' } } }}>
+            {canSubmit && (
+              <Button variant="contained" startIcon={<Send />} onClick={() => setSubmitOpen(true)}>
+                Enviar reporte
+              </Button>
+            )}
             {canChangeStatus && (
               <Button variant="contained" onClick={openStatusDialog}>
                 Cambiar estado
               </Button>
             )}
-            <Button
-              variant="outlined"
-              startIcon={<Email />}
-              onClick={handleSendEmail}
-              disabled={emailing}
-            >
-              {emailing ? 'Enviando...' : 'Enviar por email'}
-            </Button>
+            {canEmail && (
+              <Button
+                variant="outlined"
+                startIcon={<Email />}
+                onClick={handleSendEmail}
+                disabled={emailing}
+              >
+                {emailing ? 'Enviando...' : 'Enviar por email'}
+              </Button>
+            )}
             <Button
               variant="outlined"
               startIcon={<FileDownload />}
@@ -454,6 +495,37 @@ export default function ReportDetailPage() {
           </Box>
         )}
       />
+
+      {/* Draft / returned report: explain what to do before sending */}
+      {canSubmit && (
+        <Alert severity={report.estado === 'Devuelto' ? 'warning' : 'info'} sx={{ mb: 2 }}>
+          {report.estado === 'Devuelto'
+            ? 'Administración devolvió este reporte para corrección. Corrige tus logs y vuelve a enviarlo.'
+            : 'Este reporte es un borrador y todavía no se ha enviado. Revisa que los sitios y las horas estén correctos; cuando esté listo, pulsa "Enviar reporte".'}
+        </Alert>
+      )}
+
+      {/* Second confirmation before the report leaves */}
+      <Dialog open={submitOpen} onClose={() => !submitting && setSubmitOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <WarningAmber color="warning" /> ¿Enviar este reporte?
+        </DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Alert severity="warning">
+            <strong>Esta acción no se puede deshacer.</strong> El reporte se enviará directamente a administración y contabilidad.
+          </Alert>
+          <Typography variant="body2" color="text.secondary">
+            Asegúrate de haber revisado los sitios, los días y las horas. Si encuentras un error después de enviarlo,
+            solo administración podrá devolvértelo para corregirlo.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setSubmitOpen(false)} disabled={submitting}>Revisar de nuevo</Button>
+          <Button variant="contained" startIcon={<Send />} onClick={handleSubmitReport} disabled={submitting}>
+            {submitting ? 'Enviando...' : 'Sí, enviar reporte'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Status change dialog */}
       <Dialog open={statusDialog} onClose={() => setStatusDialog(false)} maxWidth="xs" fullWidth>
@@ -500,7 +572,7 @@ export default function ReportDetailPage() {
         onClose={(_, reason) => { if (reason !== 'clickaway') setNotice(''); }}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="success" variant="filled" onClose={() => setNotice('')} sx={{ width: '100%' }}>
+        <Alert severity={noticeSeverity} variant="filled" onClose={() => setNotice('')} sx={{ width: '100%' }}>
           {notice}
         </Alert>
       </Snackbar>

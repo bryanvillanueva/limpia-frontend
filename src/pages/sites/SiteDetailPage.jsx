@@ -25,11 +25,10 @@ const ENTRY_META = {
 
 const trimNumber = (n) => Number(n).toFixed(2).replace(/\.?0+$/, '') || '0';
 
-/** Value of a log: hours for SERVICE, money for BINS, free number for CUSTOM. */
+/** Value of a log, in hours. */
 function logValue(l) {
   const v = Number(l.display_value ?? l.horas_trabajadas ?? 0);
-  if (l.entry_type === 'BINS') return `$${v.toFixed(2)}`;
-  if (l.entry_type === 'CUSTOM') return trimNumber(v);
+  // Every value is expressed in hours (bins pay too), like the planner and the reports
   return `${trimNumber(v)} h`;
 }
 

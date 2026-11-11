@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Box, Alert, Typography, Chip, Button, IconButton, Tooltip, Paper, Stack, Snackbar } from '@mui/material';
+import { Box, Alert, Typography, Chip, Button, IconButton, Tooltip, Paper, Stack } from '@mui/material';
 import { Add, Visibility, CalendarMonth } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PageHeader from '../../components/ui/PageHeader';
@@ -15,7 +15,6 @@ export default function MyReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [notice, setNotice] = useState(null); // { severity, message }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -132,34 +131,10 @@ export default function MyReportsPage() {
         cycle={cycle}
         onGenerated={(result) => {
           setModalOpen(false);
-          load();
-          // The backend emails a submitted report to the admin automatically; tell the user how it went
-          const email = result?.email;
-          if (email?.sent) {
-            setNotice({ severity: 'success', message: `Reporte generado y enviado por email a ${email.to}` });
-          } else if (email?.reason === 'skipped') {
-            setNotice({ severity: 'success', message: 'Reporte generado' });
-          } else {
-            setNotice({
-              severity: 'warning',
-              message: 'Reporte generado, pero no se pudo enviar el email. Puedes reenviarlo desde el detalle del reporte.',
-            });
-          }
+          // The report is created as a draft: open it so it can be reviewed before sending
+          navigate(`/mis-reportes/${result.id}`);
         }}
       />
-
-      <Snackbar
-        open={!!notice}
-        autoHideDuration={7000}
-        onClose={(_, reason) => { if (reason !== 'clickaway') setNotice(null); }}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        {notice ? (
-          <Alert severity={notice.severity} variant="filled" onClose={() => setNotice(null)} sx={{ width: '100%' }}>
-            {notice.message}
-          </Alert>
-        ) : undefined}
-      </Snackbar>
     </>
   );
 }

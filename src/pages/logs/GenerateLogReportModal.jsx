@@ -55,7 +55,7 @@ export default function GenerateLogReportModal({ open, onClose, currentWeekStart
     setSaving(true);
     setError('');
     try {
-      const result = await generateReport({ fecha_inicio: startDate, fecha_fin: endDate });
+      const result = await generateReport({ fecha_inicio: startDate, fecha_fin: endDate, estado: 'Borrador' });
       onClose();
       navigate(`/mis-reportes/${result.id}`);
     } catch (err) {
@@ -98,7 +98,7 @@ export default function GenerateLogReportModal({ open, onClose, currentWeekStart
         )}
 
         <Typography variant="caption" color="text.secondary">
-          Solo se incluiran los logs que tengan datos registrados en estas 2 semanas.
+          Solo se incluiran los logs que tengan datos registrados en estas 2 semanas. Se crea como borrador: lo revisas y lo envias despues.
         </Typography>
 
         <DialogActions sx={{ px: 0, pb: 0 }}>

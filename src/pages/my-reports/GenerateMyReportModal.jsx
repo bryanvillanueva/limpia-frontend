@@ -1,16 +1,18 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
   Box, Typography, Alert, Button, DialogActions,
-  Divider, Paper, ToggleButton, ToggleButtonGroup, Chip,
+  Divider, Paper, Chip,
 } from '@mui/material';
 import FormModal from '../../components/ui/FormModal';
 import { getPeriodLogs, generateReport } from '../../services/reports.service';
 
 const ENTRY_TYPE_LABELS = { SERVICE: 'Service', BINS: 'Bins', CUSTOM: 'Personalizado' };
 
+// Every value in a report is hours (bins pay is expressed in hours too)
+const fmtHours = (n) => `${Number(n || 0).toFixed(2).replace(/\.?0+$/, '') || '0'} h`;
+
 export default function GenerateMyReportModal({ open, onClose, cycle, onGenerated }) {
   const [logs, setLogs] = useState([]);
-  const [estado, setEstado] = useState('Enviado');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -20,7 +22,6 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
   useEffect(() => {
     if (!open || !billingPeriodId) return;
     setLoading(true);
-    setEstado('Enviado');
     setError('');
     getPeriodLogs({ billing_period_id: billingPeriodId })
       // The endpoint returns { billing_period_id, fecha_inicio, fecha_fin, logs: [...] } (older versions returned the bare array)
@@ -41,7 +42,7 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
     try {
       const result = await generateReport({
         billing_period_id: billingPeriodId,
-        estado,
+        estado: 'Borrador', // reviewed first, sent later from the report page
       });
       onGenerated(result);
     } catch (err) {
@@ -66,20 +67,9 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
           </Typography>
         )}
 
-        <Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mb: 0.5, display: 'block' }}>
-            Estado del reporte
-          </Typography>
-          <ToggleButtonGroup
-            exclusive
-            value={estado}
-            onChange={(_, val) => { if (val) setEstado(val); }}
-            size="small"
-          >
-            <ToggleButton value="Borrador" sx={{ textTransform: 'none', fontWeight: 600 }}>Borrador</ToggleButton>
-            <ToggleButton value="Enviado"  sx={{ textTransform: 'none', fontWeight: 600 }}>Enviar</ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
+        <Alert severity="info">
+          El reporte se crea como <strong>borrador</strong>: no se envía todavía. Podrás revisarlo y enviarlo a administración cuando esté listo.
+        </Alert>
 
         <Divider />
 
@@ -123,7 +113,7 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
                     </Box>
                   </Box>
                   <Typography variant="body2" fontWeight={700} sx={{ flexShrink: 0 }}>
-                    ${Number(log.display_value || 0).toFixed(2)}
+                    {fmtHours(log.display_value)}
                   </Typography>
                 </Paper>
               ))}
@@ -134,10 +124,10 @@ export default function GenerateMyReportModal({ open, onClose, cycle, onGenerate
         <Paper elevation={0} sx={{ bgcolor: 'action.hover', borderRadius: 1, p: 2 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <Typography variant="body2" color="text.secondary">
-              Total ({logs.length} logs)
+              Total de horas ({logs.length} logs)
             </Typography>
             <Typography variant="h6" fontWeight={700} color="primary.main">
-              ${total.toFixed(2)}
+              {fmtHours(total)}
             </Typography>
           </Box>
         </Paper>
