@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Box, Typography, Paper, Grid, alpha, Skeleton, Chip, ButtonBase, Button, Alert,
 } from '@mui/material';
@@ -15,6 +15,9 @@ import StatCard from '../../components/ui/StatCard';
 import SectionTitle from '../../components/ui/SectionTitle';
 import { getCycleWeek } from '../../utils/cycle';
 import { formatHours } from '../../utils/format';
+import { getMyProfile } from '../../services/auth.service';
+import TodayRoute from './TodayRoute';
+import { heroGradient } from '../../theme/hero';
 
 const ROLE_LABELS = {
   admin: 'Administrador',
@@ -66,6 +69,10 @@ const QUICK_LINKS = {
 
 const CARD = { xs: 6, md: 3 };
 
+// MainLayout's <main> padding; the banner cancels it to reach the edges
+const PAGE_GUTTER = { xs: 1.5, sm: 2, md: 3 };
+const PAGE_GUTTER_NEG = { xs: -1.5, sm: -2, md: -3 };
+
 /* ─── Header: who, when, and the main action ─── */
 function DashboardHeader({ user, onAction }) {
   const action = PRIMARY_ACTION[user?.rol];
@@ -85,26 +92,28 @@ function DashboardHeader({ user, onAction }) {
   );
 
   return (
+    // Continues the green top bar: flush with it and with the page edges (cancels the main padding),
+    // rounded only at the bottom, so bar + banner read as one header.
     <Paper
       elevation={0}
       sx={{
         position: 'relative',
         overflow: 'hidden',
-        p: { xs: 2.5, md: 3 },
+        mx: PAGE_GUTTER_NEG,
+        mt: PAGE_GUTTER_NEG,
+        px: PAGE_GUTTER,
+        pt: { xs: 1.5, md: 2 },
+        pb: { xs: 3, md: 3.5 },
         mb: 3,
-        borderRadius: '14px',
+        borderRadius: '0 0 20px 20px',
         border: 'none',
         color: 'primary.contrastText',
-        background: (t) => `linear-gradient(120deg, ${t.palette.primary.dark} 0%, ${t.palette.primary.main} 100%)`,
-        '&::after': {
-          content: '""', position: 'absolute', width: 260, height: 260, borderRadius: '50%',
-          top: -120, right: -60, bgcolor: 'rgba(255,255,255,0.06)', pointerEvents: 'none',
-        },
+        background: heroGradient,
       }}
     >
       <Box
         sx={{
-          position: 'relative', zIndex: 1, display: 'flex', gap: 2,
+          position: 'relative', zIndex: 1, display: 'flex', gap: 2, maxWidth: 1280, mx: 'auto',
           flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' },
         }}
       >
@@ -298,54 +307,65 @@ function AccountantStats({ stats, navigate }) {
 
 /* ─── Cleaner ─── */
 function CleanerStats({ stats, navigate }) {
-  const sitesToday = stats.sites_today || [];
-  const vacation = stats.vacation_status || {};
+  const sitesToday = useMemo(() => stats.sites_today || [], [stats.sites_today]);
   const hoursToday = sitesToday.reduce((s, x) => s + (Number(x.horas) || 0), 0);
-  const vacationValue = vacation.has_pending ? 'Pendiente' : vacation.next_approved_start ? 'Aprobada' : 'Sin solicitudes';
+
+  // Home address from the profile: the default start of today's route
+  const [homeAddress, setHomeAddress] = useState(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    getMyProfile()
+      .then((p) => { if (!cancelled) setHomeAddress(p?.direccion?.trim() || null); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setProfileLoaded(true); });
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <Grid container spacing={2} sx={{ mb: 3.5 }}>
-      {/* Today: what to do and the shortcut to register it */}
-      <Grid size={{ xs: 12, md: 6 }}>
+      {/* Today: what to do and the shortcut to register it. Numbers match the pins on the map. */}
+      <Grid size={{ xs: 12, md: 5 }}>
         <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 2.5, pt: 2, pb: 1.5 }}>
             <Typography variant="subtitle1" fontWeight={700} sx={{ flex: 1 }}>Hoy</Typography>
             <Chip
               size="small"
               label={sitesToday.length === 1 ? '1 sitio' : `${sitesToday.length} sitios`}
-              sx={{ fontWeight: 600, bgcolor: (t) => alpha(t.palette.primary.main, 0.1), color: 'primary.main' }}
+              sx={{ fontWeight: 600, bgcolor: (t) => alpha(t.palette.primary.main, 0.12), color: (t) => t.palette.primary[t.palette.mode === 'dark' ? 'light' : 'main'] }}
             />
             {hoursToday > 0 && <Chip size="small" variant="outlined" label={formatHours(hoursToday)} sx={{ fontWeight: 600 }} />}
           </Box>
 
           {sitesToday.length > 0 ? (
-            <Box sx={{ flex: 1, px: 1 }}>
-              {sitesToday.map((site) => (
-                <ButtonBase
-                  key={site.site_id}
-                  onClick={() => navigate('/registrar-logs')}
-                  aria-label={`Registrar log en ${site.nombre}`}
-                  sx={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 1.25,
-                    borderRadius: '10px', textAlign: 'left',
-                    '&:hover': { bgcolor: (t) => alpha(t.palette.primary.main, 0.05) },
-                  }}
-                >
-                  <Box
+            <Box component="ol" sx={{ flex: 1, px: 1, m: 0, listStyle: 'none' }}>
+              {sitesToday.map((site, i) => (
+                <Box component="li" key={site.site_id}>
+                  <ButtonBase
+                    onClick={() => navigate('/registrar-logs')}
+                    aria-label={`Parada ${i + 1}: registrar log en ${site.nombre}`}
                     sx={{
-                      width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      bgcolor: (t) => alpha(t.palette.primary.main, 0.1), color: 'primary.main',
+                      width: '100%', display: 'flex', alignItems: 'center', gap: 1.5, px: 1.5, py: 1.25,
+                      borderRadius: '10px', textAlign: 'left',
+                      '&:hover': { bgcolor: (t) => alpha(t.palette.primary.main, 0.05) },
                     }}
                   >
-                    <LocationOn fontSize="small" />
-                  </Box>
-                  <Typography variant="body2" fontWeight={600} sx={{ flex: 1, minWidth: 0 }}>{site.nombre}</Typography>
-                  {site.horas ? (
-                    <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>{formatHours(site.horas)}</Typography>
-                  ) : null}
-                  <ChevronRight fontSize="small" sx={{ color: 'text.disabled' }} />
-                </ButtonBase>
+                    <Box
+                      sx={{
+                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        bgcolor: 'primary.main', color: 'primary.contrastText', fontSize: '0.8125rem', fontWeight: 700,
+                      }}
+                    >
+                      {i + 1}
+                    </Box>
+                    <Typography variant="body2" fontWeight={600} sx={{ flex: 1, minWidth: 0 }}>{site.nombre}</Typography>
+                    {site.horas ? (
+                      <Typography variant="body2" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>{formatHours(site.horas)}</Typography>
+                    ) : null}
+                    <ChevronRight fontSize="small" sx={{ color: 'text.disabled' }} />
+                  </ButtonBase>
+                </Box>
               ))}
             </Box>
           ) : (
@@ -363,35 +383,13 @@ function CleanerStats({ stats, navigate }) {
         </Paper>
       </Grid>
 
-      {/* Week at a glance */}
-      <Grid size={{ xs: 12, md: 6 }}>
-        <Grid container spacing={2} sx={{ height: '100%' }}>
-          <Grid size={{ xs: 6 }}>
-            <StatCard icon={<AccessTime />} label="Horas esta semana" value={formatHours(stats.hours_this_week)} />
-          </Grid>
-          <Grid size={{ xs: 6 }}>
-            <StatCard icon={<Description />} label="Logs esta semana" value={stats.logs_this_week ?? 0} onClick={() => navigate('/registrar-logs')} />
-          </Grid>
-          <Grid size={{ xs: 6 }}>
-            <StatCard
-              icon={<ShoppingCart />}
-              label="Pedidos pendientes"
-              value={stats.pending_orders ?? 0}
-              tone={(stats.pending_orders ?? 0) > 0 ? 'warning' : 'primary'}
-              onClick={() => navigate('/mis-pedidos')}
-            />
-          </Grid>
-          <Grid size={{ xs: 6 }}>
-            <StatCard
-              icon={<BeachAccess />}
-              label="Vacaciones"
-              value={<Box component="span" sx={{ fontSize: '1.05rem' }}>{vacationValue}</Box>}
-              tone={vacation.has_pending ? 'info' : 'primary'}
-              subtitle={vacation.next_approved_start ? `Desde ${new Date(`${vacation.next_approved_start}T00:00:00`).toLocaleDateString('es-CL', { day: 'numeric', month: 'short' })}` : null}
-              onClick={() => navigate('/mis-vacaciones')}
-            />
-          </Grid>
-        </Grid>
+      {/* Route through today's sites */}
+      <Grid size={{ xs: 12, md: 7 }}>
+        {profileLoaded ? (
+          <TodayRoute sites={sitesToday} homeAddress={homeAddress} />
+        ) : (
+          <Skeleton variant="rounded" height={420} sx={{ borderRadius: '14px' }} />
+        )}
       </Grid>
     </Grid>
   );
@@ -458,34 +456,36 @@ export default function DashboardPage() {
   }[user?.rol];
 
   return (
-    <Box sx={{ maxWidth: 1280, mx: 'auto' }}>
+    <Box>
       <DashboardHeader user={user} onAction={navigate} />
 
-      {loading ? (
-        <StatsSkeleton count={user?.rol === 'admin' ? 8 : user?.rol === 'cleaner' ? 4 : 6} />
-      ) : failed ? (
-        <Alert
-          severity="warning"
-          sx={{ mb: 3.5 }}
-          action={<Button color="inherit" size="small" startIcon={<Refresh />} onClick={load}>Reintentar</Button>}
-        >
-          No pudimos cargar las estadísticas.
-        </Alert>
-      ) : (
-        stats && StatsComponent && <StatsComponent stats={stats} navigate={navigate} />
-      )}
+      <Box sx={{ maxWidth: 1280, mx: 'auto' }}>
+        {loading ? (
+          <StatsSkeleton count={user?.rol === 'admin' ? 8 : user?.rol === 'cleaner' ? 4 : 6} />
+        ) : failed ? (
+          <Alert
+            severity="warning"
+            sx={{ mb: 3.5 }}
+            action={<Button color="inherit" size="small" startIcon={<Refresh />} onClick={load}>Reintentar</Button>}
+          >
+            No pudimos cargar las estadísticas.
+          </Alert>
+        ) : (
+          stats && StatsComponent && <StatsComponent stats={stats} navigate={navigate} />
+        )}
 
-      {links.length > 0 && (
-        <Section title="Accesos rápidos" sx={{ mb: 0 }}>
-          <Grid container spacing={1.5}>
-            {links.map((link) => (
-              <Grid size={{ xs: 6, sm: 4, md: 3 }} key={link.path}>
-                <QuickLink link={link} onClick={() => navigate(link.path)} />
-              </Grid>
-            ))}
-          </Grid>
-        </Section>
-      )}
+        {links.length > 0 && (
+          <Section title="Accesos rápidos" sx={{ mb: 0 }}>
+            <Grid container spacing={1.5}>
+              {links.map((link) => (
+                <Grid size={{ xs: 6, sm: 4, md: 3 }} key={link.path}>
+                  <QuickLink link={link} onClick={() => navigate(link.path)} />
+                </Grid>
+              ))}
+            </Grid>
+          </Section>
+        )}
+      </Box>
     </Box>
   );
 }

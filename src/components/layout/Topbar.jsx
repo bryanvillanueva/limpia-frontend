@@ -5,8 +5,9 @@ import { Brightness4, Brightness7, Logout, Menu, MenuOpen } from '@mui/icons-mat
 import { useAuth } from '../../context/AuthContext';
 import { useThemeMode } from '../../context/ThemeContext';
 import { useLayout } from '../../context/layoutState';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
+import { heroGradient, HERO_ROUTES } from '../../theme/hero';
 
 const ROLE_LABELS = {
   admin: 'Administrador',
@@ -22,6 +23,7 @@ export default function Topbar({ onMenuClick }) {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const hero = HERO_ROUTES.includes(useLocation().pathname);
 
   const handleLogout = () => {
     logout();
@@ -44,6 +46,17 @@ export default function Topbar({ onMenuClick }) {
         color: 'text.primary',
         borderBottom: '1px solid',
         borderColor: 'divider',
+        // Dashboard: the bar joins the green welcome banner below it (same gradient, white content)
+        ...(hero && {
+          background: heroGradient,
+          color: 'common.white',
+          borderBottomColor: 'transparent',
+          '& .MuiIconButton-root': { color: 'rgba(255,255,255,0.9)' },
+          '& .MuiIconButton-root:hover': { bgcolor: 'rgba(255,255,255,0.12)' },
+          '& .topbar-brand, & .topbar-user, & .topbar-user .MuiTypography-root': { color: 'common.white' },
+          '& .topbar-user': { bgcolor: 'rgba(255,255,255,0.12)', '&:hover': { bgcolor: 'rgba(255,255,255,0.2)' } },
+          '& .topbar-user .MuiAvatar-root': { bgcolor: 'common.white', color: 'primary.dark' },
+        }),
         // On desktop, offset by the sidebar width so it doesn't cover the logo
         width: { md: `calc(100% - ${drawerWidth}px)` },
         ml: { md: `${drawerWidth}px` },
@@ -68,6 +81,7 @@ export default function Topbar({ onMenuClick }) {
         {/* Brand — only on mobile, where the sidebar logo is hidden */}
         <Typography
           variant="subtitle1"
+          className="topbar-brand"
           sx={{ display: { xs: 'block', md: 'none' }, fontWeight: 700, color: 'primary.main' }}
         >
           Limpia
@@ -89,6 +103,7 @@ export default function Topbar({ onMenuClick }) {
           <ButtonBase
             onClick={() => navigate('/perfil')}
             aria-label="Mi perfil"
+            className="topbar-user"
             sx={{
               display: 'flex', alignItems: 'center', gap: 1.25, textAlign: 'left',
               bgcolor: (t) => alpha(t.palette.primary.main, 0.05),
