@@ -16,6 +16,9 @@ import SectionTitle from '../../components/ui/SectionTitle';
 import { getCycleWeek } from '../../utils/cycle';
 import { formatHours } from '../../utils/format';
 import { getMyProfile } from '../../services/auth.service';
+import { applySavedOrder, moveItem } from './route';
+
+const ROUTE_ORDER_KEY = 'limpia_route_order';
 import TodayRoute from './TodayRoute';
 import { heroGradient } from '../../theme/hero';
 
@@ -307,7 +310,28 @@ function AccountantStats({ stats, navigate }) {
 
 /* ─── Cleaner ─── */
 function CleanerStats({ stats, navigate }) {
-  const sitesToday = useMemo(() => stats.sites_today || [], [stats.sites_today]);
+  const plannerSites = useMemo(() => stats.sites_today || [], [stats.sites_today]);
+
+  // Visiting order: the planner's, unless the user reordered today's stops (saved for today only)
+  const todayKey = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD, local
+  const [savedOrder, setSavedOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(ROUTE_ORDER_KEY)); } catch { return null; }
+  });
+  const sitesToday = useMemo(() => applySavedOrder(plannerSites, savedOrder, todayKey), [plannerSites, savedOrder, todayKey]);
+  const customOrder = sitesToday !== plannerSites;
+  const persistOrder = (value) => {
+    setSavedOrder(value);
+    try {
+      if (value) localStorage.setItem(ROUTE_ORDER_KEY, JSON.stringify(value));
+      else localStorage.removeItem(ROUTE_ORDER_KEY);
+    } catch { /* storage unavailable */ }
+  };
+  const moveStop = (from, to) => {
+    const ids = moveItem(sitesToday, from, to).map((s) => s.site_id);
+    const plannerIds = plannerSites.map((s) => s.site_id);
+    persistOrder(ids.every((id, i) => id === plannerIds[i]) ? null : { date: todayKey, ids });
+  };
+
   const hoursToday = sitesToday.reduce((s, x) => s + (Number(x.horas) || 0), 0);
 
   // Home address from the profile: the default start of today's route
@@ -386,7 +410,13 @@ function CleanerStats({ stats, navigate }) {
       {/* Route through today's sites */}
       <Grid size={{ xs: 12, md: 7 }}>
         {profileLoaded ? (
-          <TodayRoute sites={sitesToday} homeAddress={homeAddress} />
+          <TodayRoute
+            sites={sitesToday}
+            homeAddress={homeAddress}
+            onMove={moveStop}
+            customOrder={customOrder}
+            onResetOrder={() => persistOrder(null)}
+          />
         ) : (
           <Skeleton variant="rounded" height={420} sx={{ borderRadius: '14px' }} />
         )}

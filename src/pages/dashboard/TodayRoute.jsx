@@ -3,7 +3,8 @@ import {
   Box, Paper, Typography, Button, ToggleButton, ToggleButtonGroup, TextField,
   CircularProgress, Alert, InputAdornment, IconButton, useTheme,
 } from '@mui/material';
-import { Home, Flag, EditLocationAlt, Map as MapIcon, Directions, Check, Route } from '@mui/icons-material';
+import { Home, Flag, EditLocationAlt, Map as MapIcon, Directions, Check, Route, RestartAlt } from '@mui/icons-material';
+import StopList from './StopList';
 import mapboxgl from 'mapbox-gl';
 import { useNavigate } from 'react-router-dom';
 import { buildStops, googleMapsUrl, geocode, drivingRoute, formatDistance, formatDuration } from './route';
@@ -31,14 +32,22 @@ function markerEl(stop, color) {
   return el;
 }
 
+const pinColor = (stop, isLast, palette) => {
+  if (stop.kind === 'start') return palette.grey[800];
+  return isLast ? palette.error.main : palette.primary.main;
+};
+
 /**
  * Today's route for a cleaner: where it starts (home, first site or a typed address),
  * the map with the driving route through today's sites in order, and a Google Maps link.
  *
- * @param {Array}  sites       - Today's sites ({ site_id, nombre, direccion, lat, lng }), in visiting order.
- * @param {string} [homeAddress] - The user's address from their profile, if any.
+ * @param {Array}    sites          - Today's sites ({ site_id, nombre, direccion, lat, lng }), in visiting order.
+ * @param {string}   [homeAddress]  - The user's address from their profile, if any.
+ * @param {Function} onMove         - (from, to) reorders the sites.
+ * @param {Function} [onResetOrder] - Back to the planner order.
+ * @param {boolean}  [customOrder]  - The user changed the planner order.
  */
-export default function TodayRoute({ sites, homeAddress }) {
+export default function TodayRoute({ sites, homeAddress, onMove, onResetOrder, customOrder = false }) {
   const theme = useTheme();
   const navigate = useNavigate();
   const saved = useMemo(readSaved, []);
@@ -54,8 +63,8 @@ export default function TodayRoute({ sites, homeAddress }) {
   const effectiveMode = mode === 'home' && !homeAddress ? 'first' : mode;
 
   const start = useMemo(() => {
-    if (effectiveMode === 'home') return { label: 'Mi casa', address: homeAddress };
-    if (effectiveMode === 'custom' && custom) return { label: 'Punto de partida', address: custom };
+    if (effectiveMode === 'home') return { kind: 'home', label: 'Mi casa', address: homeAddress };
+    if (effectiveMode === 'custom' && custom) return { kind: 'custom', label: 'Partida', address: custom };
     return null;
   }, [effectiveMode, homeAddress, custom]);
 
@@ -124,8 +133,9 @@ export default function TodayRoute({ sites, homeAddress }) {
         if (!map) return;
         const draw = () => {
           markersRef.current.forEach((m) => m.remove());
+          const lastSite = stops[stops.length - 1];
           markersRef.current = located.map(({ stop, at }) =>
-            new mapboxgl.Marker({ element: markerEl(stop, stop.kind === 'start' ? theme.palette.grey[800] : theme.palette.primary.main) })
+            new mapboxgl.Marker({ element: markerEl(stop, pinColor(stop, stop === lastSite, theme.palette)) })
               .setLngLat(at)
               .setPopup(new mapboxgl.Popup({ offset: 18, closeButton: false }).setText(stop.label))
               .addTo(map));
@@ -154,7 +164,7 @@ export default function TodayRoute({ sites, homeAddress }) {
     })();
 
     return () => { cancelled = true; };
-  }, [stops, theme.palette.primary.main, theme.palette.grey]);
+  }, [stops, theme.palette]);
 
   if (!sites.length) {
     return (
@@ -164,9 +174,6 @@ export default function TodayRoute({ sites, homeAddress }) {
       </Paper>
     );
   }
-
-  const first = stops[0];
-  const last = stops[stops.length - 1];
 
   return (
     <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -228,6 +235,22 @@ export default function TodayRoute({ sites, homeAddress }) {
         )}
       </Box>
 
+      {/* Stops, reorderable like in Google Maps */}
+      <Box sx={{ px: 2.5, pb: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
+          <Typography variant="caption" color="text.secondary">
+            Paradas
+            <Box component="span" sx={{ display: { xs: 'none', sm: 'inline' } }}> · arrastra para cambiar el orden</Box>
+          </Typography>
+          {customOrder && onResetOrder && (
+            <Button size="small" startIcon={<RestartAlt />} onClick={onResetOrder} sx={{ textTransform: 'none', py: 0, whiteSpace: 'nowrap' }}>
+              Orden del planner
+            </Button>
+          )}
+        </Box>
+        <StopList start={start} sites={sites} onMove={onMove} />
+      </Box>
+
       {/* Map */}
       {HAS_TOKEN && !mapError ? (
         <Box ref={mapEl} role="img" aria-label="Mapa de la ruta de hoy" sx={{ height: { xs: 220, md: 240 }, bgcolor: 'action.hover', flexShrink: 0 }} />
@@ -244,15 +267,10 @@ export default function TodayRoute({ sites, homeAddress }) {
         </Alert>
       )}
 
-      {/* From -> to + open in Maps */}
-      <Box sx={{ px: 2.5, py: 2, mt: 'auto', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'auto 1fr', columnGap: 1, rowGap: 0.25, fontSize: '0.8125rem' }}>
-          <Typography variant="body2" color="text.secondary">Desde</Typography>
-          <Typography variant="body2" fontWeight={600} noWrap title={first.address}>{first.kind === 'start' ? `${first.label} · ${first.address}` : `1 · ${first.label}`}</Typography>
-          <Typography variant="body2" color="text.secondary">Hasta</Typography>
-          <Typography variant="body2" fontWeight={600} noWrap title={last.address}>{`${last.number} · ${last.label}`}</Typography>
-        </Box>
+      {/* Open in Maps, with the same stops and order */}
+      <Box sx={{ px: 2.5, py: 2, mt: 'auto' }}>
         <Button
+          fullWidth
           variant="contained"
           startIcon={<Directions />}
           href={mapsUrl}

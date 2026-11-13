@@ -86,6 +86,29 @@ export async function drivingRoute(points, token) {
   return r ? { geometry: r.geometry, distance: r.distance, duration: r.duration } : null;
 }
 
+/** Moves one element of a list to another position (returns a new array). */
+export function moveItem(list, from, to) {
+  const next = [...list];
+  const [item] = next.splice(from, 1);
+  next.splice(to, 0, item);
+  return next;
+}
+
+/**
+ * Today's sites in the order the user chose. A saved order only applies to the same day and the same
+ * set of sites; anything else (new day, a site added or removed by the planner) falls back to the planner order.
+ *
+ * @param {Array<{site_id:number}>} sites - Planner order.
+ * @param {{date:string, ids:number[]}|null} saved
+ * @param {string} today - YYYY-MM-DD
+ */
+export function applySavedOrder(sites, saved, today) {
+  if (!saved || saved.date !== today || !Array.isArray(saved.ids) || saved.ids.length !== sites.length) return sites;
+  const byId = new Map(sites.map((s) => [s.site_id, s]));
+  if (!saved.ids.every((id) => byId.has(id))) return sites;
+  return saved.ids.map((id) => byId.get(id));
+}
+
 /** 12400 m -> "12.4 km"; 800 m -> "800 m" */
 export const formatDistance = (m) => (m >= 1000 ? `${(m / 1000).toFixed(1).replace(/\.0$/, '')} km` : `${Math.round(m)} m`);
 
