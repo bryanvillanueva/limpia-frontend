@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Typography, IconButton, Alert, Button, Tooltip, Skeleton,
-  ToggleButton, ToggleButtonGroup, Chip, alpha, Fab, useMediaQuery, useTheme,
+  ToggleButton, ToggleButtonGroup, Chip, alpha, Fab, ButtonBase, useMediaQuery, useTheme,
   Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
   Snackbar, LinearProgress,
 } from '@mui/material';
@@ -670,13 +670,21 @@ export default function MisSitiosPage() {
                   {hasLogs && (
                     <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
                       {cellLogs.map(log => (
-                        <Box
+                        <ButtonBase
                           key={log.id}
-                          sx={{ cursor: 'pointer', p: { xs: 0.5, md: 0 }, '&:hover': { opacity: 0.8 } }}
                           onClick={() => openEditModal(log, row)}
+                          aria-label={`Editar log ${(TYPE_STYLES[log.entry_type] || TYPE_STYLES.SERVICE).label} ${Number(log.display_value || 0).toFixed(2)}`}
+                          sx={{
+                            borderRadius: 1.5,
+                            px: 1,
+                            py: 0.75,
+                            minHeight: 44,
+                            '&:hover': { bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1) },
+                            '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main' },
+                          }}
                         >
                           <LogChip log={log} flash={flashIds.has(log.id)} />
-                        </Box>
+                        </ButtonBase>
                       ))}
                     </Box>
                   )}
@@ -797,66 +805,81 @@ export default function MisSitiosPage() {
                         <TableCell
                           key={dayIdx}
                           align="center"
-                          onClick={() => openModal(row, dayIdx, plannerItems)}
+                          // Empty cell: the whole cell is a big "add" target. With logs, tapping the cell does
+                          // nothing, so a near-miss on a log can never open "add" by accident.
+                          onClick={!hasLogs ? () => openModal(row, dayIdx, plannerItems) : undefined}
                           sx={{
                             verticalAlign: 'top',
                             py: 1,
                             px: 0.75,
                             minWidth: 110,
-                            cursor: 'pointer',
+                            cursor: hasLogs ? 'default' : 'pointer',
                             transition: 'background-color 0.15s',
                             ...(isToday && {
                               bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
                             }),
-                            '&:hover': {
-                              bgcolor: (theme) => alpha(theme.palette.primary.main, isToday ? 0.10 : 0.06),
-                            },
+                            ...(!hasLogs && {
+                              '&:hover': {
+                                bgcolor: (theme) => alpha(theme.palette.primary.main, isToday ? 0.10 : 0.06),
+                              },
+                            }),
                           }}
                         >
-                          {/* Logged entries — click to edit/delete */}
-                          {cellLogs.map(log => (
-                            <Box
-                              key={log.id}
-                              sx={{ mb: 0.5, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
-                              onClick={(e) => { e.stopPropagation(); openEditModal(log, row); }}
-                            >
-                              <LogChip log={log} flash={flashIds.has(log.id)} />
-                            </Box>
-                          ))}
+                          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                            {/* Logged entries: each one is a real button that EDITS that log */}
+                            {cellLogs.map(log => (
+                              <ButtonBase
+                                key={log.id}
+                                onClick={() => openEditModal(log, row)}
+                                aria-label={`Editar log ${(TYPE_STYLES[log.entry_type] || TYPE_STYLES.SERVICE).label} ${Number(log.display_value || 0).toFixed(2)}`}
+                                sx={{
+                                  borderRadius: 1.5,
+                                  px: 1,
+                                  py: 0.75,
+                                  minWidth: 88,
+                                  minHeight: { xs: 44, md: 36 },
+                                  transition: 'background-color 0.15s',
+                                  '&:hover': { bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1) },
+                                  '&.Mui-focusVisible': { outline: '2px solid', outlineColor: 'primary.main' },
+                                }}
+                              >
+                                <LogChip log={log} flash={flashIds.has(log.id)} />
+                              </ButtonBase>
+                            ))}
 
-                          {/* Planner indicators (only if no matching log for that type) */}
-                          {!hasLogs && hasPlanner && plannerItems.map(item => (
-                            <Box key={item.item_id} sx={{ mb: 0.5 }}>
-                              <PlannedIndicator item={item} />
-                            </Box>
-                          ))}
+                            {/* Planner indicators (only if no matching log for that type) */}
+                            {!hasLogs && hasPlanner && plannerItems.map(item => (
+                              <Box key={item.item_id}>
+                                <PlannedIndicator item={item} />
+                              </Box>
+                            ))}
 
-                          {/* Empty cell hint */}
-                          {!hasLogs && !hasPlanner && (
-                            <Add
-                              sx={{
-                                fontSize: 16,
-                                color: 'text.disabled',
-                                opacity: 0,
-                                transition: 'opacity 0.15s',
-                                '.MuiTableCell-root:hover &': { opacity: 1 },
-                              }}
-                            />
-                          )}
-
-                          {/* "Add more" hint when there are logs but user might want to add another type */}
-                          {hasLogs && (
-                            <Add
-                              sx={{
-                                fontSize: 14,
-                                color: 'text.disabled',
-                                opacity: 0,
-                                mt: 0.25,
-                                transition: 'opacity 0.15s',
-                                '.MuiTableCell-root:hover &': { opacity: 0.6 },
-                              }}
-                            />
-                          )}
+                            {/* Add: a separate, clearly visible button (not a hover-only hint) */}
+                            <Tooltip title="Agregar log" arrow>
+                              <IconButton
+                                size="small"
+                                aria-label="Agregar log"
+                                onClick={(e) => { e.stopPropagation(); openModal(row, dayIdx, plannerItems); }}
+                                sx={{
+                                  width: 32,
+                                  height: 32,
+                                  mt: hasLogs ? 0.5 : 0,
+                                  border: '1px dashed',
+                                  borderColor: 'divider',
+                                  color: 'text.disabled',
+                                  opacity: hasLogs ? 1 : 0.55,
+                                  '&:hover': {
+                                    opacity: 1,
+                                    borderColor: 'primary.main',
+                                    color: 'primary.main',
+                                    bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+                                  },
+                                }}
+                              >
+                                <Add fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
                         </TableCell>
                       );
                     })}

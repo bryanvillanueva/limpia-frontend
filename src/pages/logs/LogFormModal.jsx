@@ -20,6 +20,8 @@ function parseDateLocal(str) {
 
 const DAY_NAMES_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
+const trimHours = (n) => Number(n).toFixed(2).replace(/\.?0+$/, '') || '0';
+
 const siteLabel = (s) =>
   [s.direccion_linea1 || s.nombre, s.suburb].filter(Boolean).join(', ') || `Sitio ${s.site_id ?? s.id}`;
 
@@ -143,21 +145,27 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
   // A site without a team assignment has no hourly rate or bins pay: the log is always "Otro" with a typed value
   const isUnassigned = !isEdit && !!effectiveSite?.unassigned;
   const effType = isUnassigned ? 'CUSTOM' : entryType;
-  const canBins = effectiveSite?.hace_bins === 1;
+  // An existing Bins log keeps its type even if the site has no bins rate today
+  const canBins = effectiveSite?.hace_bins === 1 || (isEdit && existingLog?.entry_type === 'BINS');
   const isCustom = effType === 'CUSTOM';
 
+  // What the user sees under the type: the value an existing log was registered with, or the site rate for a new one
   const previewValue = useMemo(() => {
-    if (!effectiveSite || isCustom) return null;
+    if (isCustom) return null;
+    if (isEdit && existingLog && effType === existingLog.entry_type && existingLog.display_value != null) {
+      return { label: 'Valor registrado', text: `${trimHours(existingLog.display_value)} h` };
+    }
+    if (!effectiveSite) return null;
     if (effType === 'SERVICE') {
       const h = effectiveSite.horas_por_trabajador;
-      return h != null ? `${h}h por trabajador` : 'Sin horas asignadas';
+      return { label: 'Valor estimado', text: h != null ? `${trimHours(h)} h por trabajador` : 'Sin horas asignadas' };
     }
     if (effType === 'BINS') {
       const p = effectiveSite.pago_bins;
-      return p != null ? `$${Number(p).toFixed(2)} pago bins` : 'Sin pago bins asignado';
+      return { label: 'Valor estimado', text: p != null ? `${trimHours(p)} h por bins` : 'Sin horas de bins asignadas' };
     }
     return null;
-  }, [effectiveSite, effType, isCustom]);
+  }, [effectiveSite, effType, isCustom, isEdit, existingLog]);
 
   const dateLabel = useMemo(() => {
     if (!logDate) return '';
@@ -394,8 +402,8 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
         {/* Value preview */}
         {previewValue && (
           <Box sx={{ bgcolor: 'action.hover', borderRadius: 1, px: 2, py: 1 }}>
-            <Typography variant="caption" color="text.secondary">Valor estimado</Typography>
-            <Typography variant="body2" fontWeight={600}>{previewValue}</Typography>
+            <Typography variant="caption" color="text.secondary">{previewValue.label}</Typography>
+            <Typography variant="body2" fontWeight={600}>{previewValue.text}</Typography>
           </Box>
         )}
 
