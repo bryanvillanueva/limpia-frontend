@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, ToggleButton, ToggleButtonGroup, TextField,
-  Typography, Box, Alert, Autocomplete, useMediaQuery, useTheme, alpha,
+  Typography, Box, Alert, Autocomplete, useMediaQuery, useTheme, alpha, Slide, IconButton,
 } from '@mui/material';
-import { Delete, AddLocationAlt } from '@mui/icons-material';
+import { Delete, AddLocationAlt, Close } from '@mui/icons-material';
 import { createLog, updateLog, deleteLog } from '../../services/logs.service';
 import { searchSites, createQuickSite } from '../../services/sites.service';
 import DateField from '../../components/ui/DateField';
@@ -48,6 +48,8 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
   const isEdit = !!existingLog;
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
+  // On desktop the form is a side panel, so the week grid stays in view while registering
+  const asPanel = useMediaQuery(theme.breakpoints.up('md'));
 
   const [selectedSite, setSelectedSite] = useState(null);
   const [logDate, setLogDate] = useState('');
@@ -243,9 +245,34 @@ export default function LogFormModal({ open, onClose, site, fecha, plannerEntry,
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={fullScreen}>
-      <DialogTitle>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="xs"
+      fullWidth
+      fullScreen={fullScreen}
+      {...(asPanel && {
+        slots: { transition: Slide },
+        slotProps: {
+          transition: { direction: 'left' },
+          backdrop: { sx: { bgcolor: alpha(theme.palette.common.black, 0.12) } },
+          paper: {
+            sx: {
+              m: 0, width: 420, maxWidth: '100%', height: '100%', maxHeight: '100%',
+              borderRadius: '16px 0 0 16px',
+            },
+          },
+        },
+        sx: { '& .MuiDialog-container': { justifyContent: 'flex-end', alignItems: 'stretch' } },
+      })}
+    >
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
         {isEdit ? 'Editar log' : 'Registrar log'}
+        {asPanel && (
+          <IconButton aria-label="Cerrar" onClick={onClose} size="small" edge="end">
+            <Close fontSize="small" />
+          </IconButton>
+        )}
       </DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
         {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
