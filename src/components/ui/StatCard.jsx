@@ -32,10 +32,18 @@ export default function StatCard({ icon, label, value, subtitle, tone, color, hi
   const toneKey = resolveTone(tone, color);
 
   const content = (
-    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%', p: 2 }}>
+    // Phones (2 cards per row): icon on top, number below, so values like "186.5 h" never wrap
+    <Box
+      sx={{
+        display: 'flex', width: '100%', p: 2,
+        flexDirection: { xs: 'column', sm: 'row' },
+        alignItems: { xs: 'flex-start', sm: 'center' },
+        gap: { xs: 1.25, sm: 2 },
+      }}
+    >
       <Box
         sx={{
-          width: 48, height: 48, borderRadius: 2.5, flexShrink: 0,
+          width: 44, height: 44, borderRadius: '12px', flexShrink: 0,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           bgcolor: (t) => alpha(t.palette[toneKey].main, 0.12),
           color: `${toneKey}.main`,
@@ -43,8 +51,8 @@ export default function StatCard({ icon, label, value, subtitle, tone, color, hi
       >
         {icon}
       </Box>
-      <Box sx={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-        <Typography variant="h5" sx={{ fontWeight: 800, lineHeight: 1.15 }}>
+      <Box sx={{ flex: 1, minWidth: 0, textAlign: 'left', width: { xs: '100%', sm: 'auto' } }}>
+        <Typography variant="h5" sx={{ fontWeight: 800, lineHeight: 1.15, whiteSpace: 'nowrap' }}>
           {value}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.3, mt: 0.25 }}>
@@ -56,7 +64,7 @@ export default function StatCard({ icon, label, value, subtitle, tone, color, hi
           </Typography>
         )}
       </Box>
-      {onClick && <ChevronRight fontSize="small" sx={{ color: 'text.disabled', flexShrink: 0 }} />}
+      {onClick && <ChevronRight fontSize="small" sx={{ color: 'text.disabled', flexShrink: 0, display: { xs: 'none', sm: 'block' } }} />}
     </Box>
   );
 

@@ -1,13 +1,12 @@
 import {
-  AppBar, Toolbar, IconButton, Typography, Box, Tooltip, Avatar, ButtonBase, alpha,
+  AppBar, Toolbar, IconButton, Typography, Box, Tooltip, Avatar, ButtonBase, alpha, useMediaQuery, useTheme,
 } from '@mui/material';
-import { Brightness4, Brightness7, Logout, Menu } from '@mui/icons-material';
+import { Brightness4, Brightness7, Logout, Menu, MenuOpen } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
 import { useThemeMode } from '../../context/ThemeContext';
+import { useLayout } from '../../context/layoutState';
 import { useNavigate } from 'react-router-dom';
 import NotificationBell from './NotificationBell';
-
-const DRAWER_WIDTH = 260;
 
 const ROLE_LABELS = {
   admin: 'Administrador',
@@ -19,7 +18,10 @@ const ROLE_LABELS = {
 export default function Topbar({ onMenuClick }) {
   const { user, logout } = useAuth();
   const { mode, toggleMode } = useThemeMode();
+  const { collapsed, toggleCollapsed, drawerWidth } = useLayout();
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const handleLogout = () => {
     logout();
@@ -30,6 +32,9 @@ export default function Topbar({ onMenuClick }) {
     ? user.nombre.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
     : '?';
 
+  // Desktop: collapse / expand the sidebar. Mobile: open the drawer.
+  const menuLabel = isDesktop ? (collapsed ? 'Expandir menú' : 'Contraer menú') : 'Abrir menú';
+
   return (
     <AppBar
       position="fixed"
@@ -39,22 +44,26 @@ export default function Topbar({ onMenuClick }) {
         color: 'text.primary',
         borderBottom: '1px solid',
         borderColor: 'divider',
-        // On desktop, offset by sidebar width so it doesn't cover the logo
-        width: { md: `calc(100% - ${DRAWER_WIDTH}px)` },
-        ml: { md: `${DRAWER_WIDTH}px` },
+        // On desktop, offset by the sidebar width so it doesn't cover the logo
+        width: { md: `calc(100% - ${drawerWidth}px)` },
+        ml: { md: `${drawerWidth}px` },
+        transition: theme.transitions.create(['width', 'margin'], { duration: theme.transitions.duration.shorter }),
         // Keep content clear of the notch / status bar when installed as a PWA
         pt: 'env(safe-area-inset-top)',
       }}
     >
       <Toolbar sx={{ gap: 1, px: { xs: 1, sm: 3 } }}>
-        <IconButton
-          edge="start"
-          aria-label="Abrir menú"
-          onClick={onMenuClick}
-          sx={{ display: { md: 'none' } }}
-        >
-          <Menu />
-        </IconButton>
+        <Tooltip title={isDesktop ? menuLabel : ''}>
+          <IconButton
+            edge="start"
+            aria-label={menuLabel}
+            aria-expanded={isDesktop ? !collapsed : undefined}
+            onClick={isDesktop ? toggleCollapsed : onMenuClick}
+            sx={{ color: 'text.secondary' }}
+          >
+            {isDesktop && !collapsed ? <MenuOpen /> : <Menu />}
+          </IconButton>
+        </Tooltip>
 
         {/* Brand — only on mobile, where the sidebar logo is hidden */}
         <Typography
@@ -81,11 +90,11 @@ export default function Topbar({ onMenuClick }) {
             onClick={() => navigate('/perfil')}
             aria-label="Mi perfil"
             sx={{
-              display: 'flex', alignItems: 'center', gap: 1.5, textAlign: 'left',
-              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.05),
-              '&:hover': { bgcolor: (theme) => alpha(theme.palette.primary.main, 0.1) },
-              borderRadius: 2,
-              py: 0.5, px: { xs: 0.5, sm: 1.5 },
+              display: 'flex', alignItems: 'center', gap: 1.25, textAlign: 'left',
+              bgcolor: (t) => alpha(t.palette.primary.main, 0.05),
+              '&:hover': { bgcolor: (t) => alpha(t.palette.primary.main, 0.1) },
+              borderRadius: '10px',
+              py: 0.5, px: { xs: 0.5, sm: 1.25 },
               ml: 0.5,
             }}
           >

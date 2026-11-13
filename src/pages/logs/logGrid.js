@@ -1,4 +1,5 @@
 // Pure helpers for the "Registrar Logs" week grid (kept apart from the components for react-refresh).
+import { formatHours } from '../../utils/format';
 
 /** Service type = color + label. The state (planned / registered) is shown with an icon, never only with color. */
 export const TYPE_META = {
@@ -13,7 +14,7 @@ export const typeOf = (entryType) => (TYPE_META[entryType] ? entryType : 'SERVIC
 export const typeMeta = (entryType) => TYPE_META[typeOf(entryType)];
 
 /** 1.25 -> "1.25 h", 2 -> "2 h" */
-export const hoursLabel = (n) => `${Number(n || 0).toFixed(2).replace(/\.?0+$/, '') || '0'} h`;
+export const hoursLabel = formatHours;
 
 /**
  * One entry per service in a cell. A planned service and its log are the SAME entry in two states:
