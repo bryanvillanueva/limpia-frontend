@@ -596,6 +596,7 @@ export default function MisSitiosPage() {
             {dayRows.map(row => {
               const entries = entriesFor(row, selectedDayIdx);
               const pending = entries.filter(e => e.state === 'planned').map(e => e.item);
+              const hasLogged = entries.some(e => e.state === 'logged');
 
               return (
                 <Paper
@@ -620,7 +621,7 @@ export default function MisSitiosPage() {
 
                   {/* Same card for planned and registered services: tap a registered one to edit it,
                       a planned one to register it */}
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 1, mb: 1.5 }}>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 1, mb: hasLogged ? 0 : 1.5 }}>
                     {entries.map(entry => (
                       <EntryCard
                         key={entry.key}
@@ -635,18 +636,20 @@ export default function MisSitiosPage() {
                     ))}
                   </Box>
 
-                  {/* Add another log for this site and day */}
-                  <Button
-                    size={isMobile ? 'medium' : 'small'}
-                    variant="text"
-                    startIcon={<Add />}
-                    fullWidth={isMobile}
-                    onClick={() => openModal(row, selectedDayIdx, pending)}
-                    aria-label={`Agregar log, ${row.site_name}, ${dayName(selectedDayIdx)}`}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Agregar log
-                  </Button>
+                  {/* Add a log for this site and day — hidden once something is registered */}
+                  {!hasLogged && (
+                    <Button
+                      size={isMobile ? 'medium' : 'small'}
+                      variant="text"
+                      startIcon={<Add />}
+                      fullWidth={isMobile}
+                      onClick={() => openModal(row, selectedDayIdx, pending)}
+                      aria-label={`Agregar log, ${row.site_name}, ${dayName(selectedDayIdx)}`}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      Agregar log
+                    </Button>
+                  )}
                 </Paper>
               );
             })}
@@ -682,7 +685,7 @@ export default function MisSitiosPage() {
             <Table
               size="small"
               sx={{
-                minWidth: 1080,
+                minWidth: 1440,
                 borderCollapse: 'separate',
                 borderSpacing: '6px',
                 '& td, & th': { borderBottom: 'none' },
@@ -696,19 +699,19 @@ export default function MisSitiosPage() {
                   {weekDates.map((date, i) => {
                     const isToday = i === todayIndex;
                     return (
-                      <TableCell key={i} align="center" sx={{ p: 0, minWidth: 128, verticalAlign: 'bottom' }}>
+                      <TableCell key={i} align="center" sx={{ p: 0, minWidth: 164, verticalAlign: 'bottom' }}>
                         <Box
                           sx={{
-                            borderRadius: 2,
+                            borderRadius: '8px',
                             py: 0.75,
                             ...(isToday && { bgcolor: (t) => alpha(t.palette.primary.main, 0.1) }),
                           }}
                         >
-                          <Typography variant="body2" fontWeight={700} sx={{ textTransform: 'uppercase', color: isToday ? 'primary.main' : 'text.primary' }}>
+                          <Typography variant="body2" fontWeight={700} sx={{ textTransform: 'uppercase', color: (th) => (isToday ? th.palette.primary[th.palette.mode === 'dark' ? 'light' : 'main'] : th.palette.text.primary) }}>
                             {DAY_LABELS[i]} {date.getDate()}
                           </Typography>
                           {isToday && (
-                            <Typography component="div" sx={{ fontSize: '0.65rem', fontWeight: 700, lineHeight: 1.2, color: 'primary.main' }}>
+                            <Typography component="div" sx={{ fontSize: '0.65rem', fontWeight: 700, lineHeight: 1.2, color: (th) => th.palette.primary[th.palette.mode === 'dark' ? 'light' : 'main'] }}>
                               HOY
                             </Typography>
                           )}
@@ -749,27 +752,25 @@ export default function MisSitiosPage() {
                         const add = () => openModal(row, dayIdx, pending);
 
                         return (
-                          <TableCell key={dayIdx} sx={{ p: 0, verticalAlign: 'top', height: 1 }}>
+                          <TableCell key={dayIdx} sx={{ p: 0, verticalAlign: 'top', height: '1px' /* lets the tile fill the row */ }}>
                             <Box
                               sx={{
                                 height: '100%',
                                 minHeight: 64,
                                 p: 0.5,
-                                borderRadius: 2.5,
+                                borderRadius: '10px',
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: 0.5,
                                 bgcolor: (t) => (isToday
                                   ? alpha(t.palette.primary.main, 0.05)
                                   : alpha(t.palette.text.primary, t.palette.mode === 'dark' ? 0.05 : 0.035)),
-                                // Pointer devices: the "+" shows up when hovering or focusing the tile
-                                '@media (hover: hover)': {
-                                  '&:hover .add-in-cell, &:focus-within .add-in-cell': { opacity: 1 },
-                                },
                               }}
                             >
+                              {/* Empty cell: one big add target. With cards, each card is the action
+                                  (planned -> register, registered -> edit), so there is no separate add button. */}
                               {entries.length === 0 ? (
-                                <AddInCell fill siteName={row.site_name} dayName={day} onClick={add} />
+                                <AddInCell siteName={row.site_name} dayName={day} onClick={add} />
                               ) : (
                                 <>
                                   {entries.map(entry => (
@@ -784,7 +785,6 @@ export default function MisSitiosPage() {
                                         : openModal(row, dayIdx, [entry.item]))}
                                     />
                                   ))}
-                                  <AddInCell siteName={row.site_name} dayName={day} onClick={add} />
                                 </>
                               )}
                             </Box>
