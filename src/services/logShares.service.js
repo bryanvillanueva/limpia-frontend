@@ -12,7 +12,14 @@ export const getShareRecipients = () =>
 export const createLogShare = (data) =>
   apiClient.post('/log-shares', data).then(r => r.data);
 
-/** Recipient accepts: copies the sender's logs of the range. Returns { status, summary }. */
+/**
+ * What accepting would do, log by log (read-only): each offered log is 'create' or 'skip' (already owned),
+ * with the recipient's own log when it exists, plus totals. The offer is frozen when the sender sends it.
+ */
+export const getSharePreview = (id) =>
+  apiClient.get(`/log-shares/${id}/preview`).then(r => r.data);
+
+/** Recipient accepts: creates the offered logs they do not have yet. Returns { status, summary }. */
 export const acceptLogShare = (id) =>
   apiClient.post(`/log-shares/${id}/accept`).then(r => r.data);
 

@@ -10,7 +10,7 @@ import {
 import {
   getUnreadCount, getNotifications, markNotificationRead, markAllNotificationsRead,
 } from '../../services/notifications.service';
-import { acceptLogShare, rejectLogShare } from '../../services/logShares.service';
+import ShareReviewDialog from './ShareReviewDialog';
 
 const POLL_MS = 60 * 1000;
 
@@ -61,7 +61,7 @@ export default function NotificationBell() {
   const [anchorEl, setAnchorEl] = useState(null);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [actingId, setActingId] = useState(null);
+  const [reviewId, setReviewId] = useState(null); // share request being reviewed (preview dialog)
   const [notice, setNotice] = useState(null); // { severity, message }
   const openRef = useRef(false);
 
@@ -111,6 +111,10 @@ export default function NotificationBell() {
   };
 
   const handleItemClick = async (n) => {
+    if (n.type === 'log_share_request' && n.share_status === 'pending') {
+      setAnchorEl(null);
+      setReviewId(n.ref_id);
+    }
     const link = NOTIFICATION_LINK[n.type]?.(n);
     if (link) {
       setAnchorEl(null);
@@ -128,36 +132,12 @@ export default function NotificationBell() {
     try { await markAllNotificationsRead(); } catch { refreshCount(); }
   };
 
-  const respond = async (n, action) => {
-    setActingId(n.id);
-    try {
-      const result = action === 'accept' ? await acceptLogShare(n.ref_id) : await rejectLogShare(n.ref_id);
-      setItems(prev => prev.map(x => (
-        x.id === n.id
-          ? { ...x, share_status: result.status, read_at: x.read_at || new Date().toISOString() }
-          : x
-      )));
-      if (action === 'accept') {
-        const created = result.summary?.created ?? 0;
-        const skipped = result.summary?.skipped_existing ?? 0;
-        setNotice({
-          severity: 'success',
-          message: created > 0
-            ? `Se sincronizaron ${created} log${created !== 1 ? 's' : ''}`
-              + (skipped > 0 ? ` (${skipped} ya los tenías)` : '')
-            : 'Ya tenías todos esos logs, no había nada nuevo que sincronizar',
-        });
-        window.dispatchEvent(new CustomEvent(LOGS_CHANGED_EVENT));
-      } else {
-        setNotice({ severity: 'info', message: 'Solicitud rechazada' });
-      }
-      refreshCount();
-    } catch (err) {
-      setNotice({ severity: 'error', message: err.response?.data?.message || 'No se pudo responder la solicitud' });
-      loadList(); // the request may have changed state (cancelled, answered elsewhere)
-    } finally {
-      setActingId(null);
-    }
+  /** The review dialog answered "reject": reflect it in the list and tell the user. */
+  const handleRejected = () => {
+    setItems(prev => prev.map(x => (x.type === 'log_share_request' && x.ref_id === reviewId ? { ...x, share_status: 'rejected', read_at: x.read_at || new Date().toISOString() } : x)));
+    setReviewId(null);
+    setNotice({ severity: 'info', message: 'Solicitud rechazada' });
+    refreshCount();
   };
 
   return (
@@ -216,7 +196,6 @@ export default function NotificationBell() {
             items.map((n, i) => {
               const isUnread = !n.read_at;
               const pendingRequest = n.type === 'log_share_request' && n.share_status === 'pending';
-              const acting = actingId === n.id;
               return (
                 <Box key={n.id}>
                   {i > 0 && <Divider />}
@@ -245,20 +224,9 @@ export default function NotificationBell() {
                           <Button
                             size="small"
                             variant="contained"
-                            disabled={acting}
-                            onClick={(e) => { e.stopPropagation(); respond(n, 'accept'); }}
-                            sx={{ flex: 1 }}
+                            onClick={(e) => { e.stopPropagation(); setAnchorEl(null); setReviewId(n.ref_id); }}
                           >
-                            {acting ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : 'Aceptar'}
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            disabled={acting}
-                            onClick={(e) => { e.stopPropagation(); respond(n, 'reject'); }}
-                            sx={{ flex: 1 }}
-                          >
-                            Rechazar
+                            Revisar y responder
                           </Button>
                         </Box>
                       )}
@@ -275,6 +243,14 @@ export default function NotificationBell() {
           )}
         </Box>
       </Popover>
+
+      <ShareReviewDialog
+        key={reviewId || 'none'}
+        open={!!reviewId}
+        shareId={reviewId}
+        onClose={() => { setReviewId(null); loadList(); }}
+        onRejected={handleRejected}
+      />
 
       <Snackbar
         open={!!notice}
