@@ -129,7 +129,7 @@ export default function ShareLogsDialog({ open, onClose, fechaInicio, fechaFin, 
             )}
 
             <Typography variant="caption" color="text.secondary" sx={{ textTransform: 'none', letterSpacing: 0 }}>
-              La persona recibirá una notificación y decide si acepta. Solo se copian los logs que le falten.
+              Se enviarán los {logCount} log{logCount !== 1 ? 's' : ''} que tienes ahora en esta semana. Si después agregas más, tendrás que compartirlos de nuevo. La persona verá una vista previa y decide si acepta; solo se crean los que le falten.
             </Typography>
           </>
         )}

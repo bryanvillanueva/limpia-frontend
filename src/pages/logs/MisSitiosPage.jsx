@@ -2,11 +2,9 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Box, Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Paper, Typography, IconButton, Alert, Button, Tooltip, Skeleton,
-  ToggleButton, ToggleButtonGroup, Chip, alpha, Fab, useMediaQuery, useTheme,
-  Dialog, DialogTitle, DialogContent, DialogActions, CircularProgress,
+  ToggleButton, ToggleButtonGroup, alpha, Fab, useMediaQuery, useTheme,
   Snackbar, LinearProgress,
 } from '@mui/material';
-import { keyframes } from '@mui/material/styles';
 import {
   Add, ChevronLeft, ChevronRight, CalendarMonth, EventNote,
   ViewWeek, ViewDay, Share, Assessment,
@@ -22,14 +20,19 @@ import { getMyTeam, getWeekPlan, getTeamSites } from '../../services/planner.ser
 import { getCycleWeek } from '../../utils/cycle';
 import NoTeamState from '../../components/ui/NoTeamState';
 import { isNoTeamError } from '../../utils/team';
+import { EntryCard, AddInCell, LogLegend, WeekSummary } from './LogGridParts';
+import { cellEntries, hoursLabel } from './logGrid';
 
 const DAY_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const CYCLE_WEEKS = [1, 2, 3, 4];
 
-const TYPE_STYLES = {
-  SERVICE: { bg: '#e8f5e9', fg: '#2e7d32', label: 'Service' },
-  BINS:    { bg: '#e3f2fd', fg: '#1565c0', label: 'Bins' },
-  CUSTOM:  { bg: '#fff3e0', fg: '#e65100', label: 'Otro' },
+// Site column stays put while the week scrolls sideways; the shadow covers the 6px gaps between tiles
+const stickySx = {
+  position: 'sticky',
+  left: 0,
+  zIndex: 2,
+  bgcolor: 'background.paper',
+  boxShadow: (t) => `-6px 0 0 ${t.palette.background.paper}, 6px 0 0 ${t.palette.background.paper}`,
 };
 
 function formatDate(d) {
@@ -48,93 +51,6 @@ function getMonday(date, offset = 0) {
   d.setDate(d.getDate() - (day === 0 ? 6 : day - 1) + offset * 7);
   d.setHours(0, 0, 0, 0);
   return d;
-}
-
-// Brief pulse on a log that was just created or edited, so the user sees where it landed
-const flashPulse = keyframes`
-  0%   { background-color: rgba(38, 97, 79, 0.35); box-shadow: 0 0 0 0 rgba(38, 97, 79, 0.5); }
-  100% { background-color: rgba(38, 97, 79, 0);    box-shadow: 0 0 0 10px rgba(38, 97, 79, 0); }
-`;
-
-/** Solid chip for a logged entry. */
-function LogChip({ log, flash = false }) {
-  const style = TYPE_STYLES[log.entry_type] || TYPE_STYLES.SERVICE;
-  const value = Number(log.display_value || 0);
-
-  return (
-    <Box
-      sx={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25, borderRadius: 1,
-        ...(flash && { animation: `${flashPulse} 2s ease-out` }),
-      }}
-    >
-      <Box
-        sx={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 0.5,
-          bgcolor: style.bg,
-          color: style.fg,
-          borderRadius: 1,
-          px: 0.75,
-          py: 0.25,
-          fontWeight: 600,
-        }}
-      >
-        <Chip
-          label={style.label}
-          size="small"
-          sx={{
-            height: 18,
-            fontSize: '0.6rem',
-            fontWeight: 700,
-            bgcolor: alpha(style.fg, 0.15),
-            color: style.fg,
-            '& .MuiChip-label': { px: 0.5 },
-          }}
-        />
-        <Typography variant="caption" sx={{ fontWeight: 600, color: 'inherit', lineHeight: 1, fontSize: '0.7rem' }}>
-          {value.toFixed(2)}
-        </Typography>
-      </Box>
-      {log.observaciones && (
-        <Typography
-          variant="caption"
-          sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1.2, maxWidth: 100, textAlign: 'center' }}
-          noWrap
-        >
-          {log.observaciones}
-        </Typography>
-      )}
-    </Box>
-  );
-}
-
-/** Faded indicator showing a planned (but not yet logged) entry. */
-function PlannedIndicator({ item }) {
-  const style = TYPE_STYLES[item.entry_type] || TYPE_STYLES.SERVICE;
-  return (
-    <Box
-      sx={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 0.5,
-        border: '1px dashed',
-        borderColor: alpha(style.fg, 0.4),
-        borderRadius: 1,
-        px: 0.75,
-        py: 0.25,
-        opacity: 0.55,
-      }}
-    >
-      <Typography variant="caption" sx={{ fontWeight: 600, color: style.fg, lineHeight: 1, fontSize: '0.6rem' }}>
-        {style.label}
-      </Typography>
-      <Typography variant="caption" sx={{ color: 'text.secondary', lineHeight: 1, fontSize: '0.6rem' }}>
-        planificado
-      </Typography>
-    </Box>
-  );
 }
 
 export default function MisSitiosPage() {
@@ -400,6 +316,35 @@ export default function MisSitiosPage() {
     });
   }, [viewMode, selectedDayIdx, gridRows, logsBySiteDay]);
 
+  // Entries (planned + registered, merged) of one cell
+  const entriesFor = useCallback(
+    (row, dayIdx) => cellEntries(row.plannerByDay[dayIdx] || [], logsBySiteDay[`${row.site_id}_${dayIdx}`] || []),
+    [logsBySiteDay],
+  );
+
+  // Operational summary of the displayed week
+  const weekSummary = useMemo(() => {
+    let planned = 0;
+    let pending = 0;
+    for (const row of gridRows) {
+      for (let d = 0; d < 7; d++) {
+        planned += (row.plannerByDay[d] || []).length;
+        pending += entriesFor(row, d).filter(e => e.state === 'planned').length;
+      }
+    }
+    const hours = logs.reduce((s, l) => s + Number(l.display_value || 0), 0);
+    return [
+      { label: gridRows.length === 1 ? 'sitio' : 'sitios', value: gridRows.length },
+      { label: planned === 1 ? 'servicio planificado' : 'servicios planificados', value: planned },
+      { label: pending === 1 ? 'pendiente de registrar' : 'pendientes de registrar', value: pending, tone: pending > 0 ? 'warning' : undefined },
+      { label: logs.length === 1 ? 'log registrado' : 'logs registrados', value: logs.length, tone: 'success' },
+      { label: 'registradas', value: hoursLabel(hours) },
+    ];
+  }, [gridRows, entriesFor, logs]);
+
+  // "lunes 9 nov." — used in accessible names and tooltips
+  const dayName = (dayIdx) => weekDates[dayIdx].toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'short' });
+
   // Build enriched site object from a grid row
   const buildModalSite = (siteRow) => {
     const ts = teamSites.find(s => s.site_id === siteRow.site_id);
@@ -575,14 +520,26 @@ export default function MisSitiosPage() {
           </ToggleButtonGroup>
         </Box>
 
-        {/* Log count */}
-        <Typography variant="body2" color="text.secondary" sx={{ ml: { xs: 0, sm: 'auto' } }}>
-          {viewMode === 'day'
-            ? `${dayLogCount} log${dayLogCount !== 1 ? 's' : ''} hoy`
-            : `${logs.length} log${logs.length !== 1 ? 's' : ''} esta semana`
-          }
-        </Typography>
+        {/* Log count of the selected day (the week has its own summary below) */}
+        {viewMode === 'day' && (
+          <Typography variant="body2" color="text.secondary" sx={{ ml: { xs: 0, sm: 'auto' } }}>
+            {`${dayLogCount} log${dayLogCount !== 1 ? 's' : ''} este día`}
+          </Typography>
+        )}
       </Box>
+
+      {/* Week summary + legend: what is left to do, without scanning the grid */}
+      {viewMode === 'week' && !loading && gridRows.length > 0 && (
+        <Box
+          sx={{
+            display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, alignItems: { xs: 'flex-start', lg: 'center' },
+            justifyContent: 'space-between', gap: 1.5, mb: 1.5,
+          }}
+        >
+          <WeekSummary items={weekSummary} />
+          <LogLegend />
+        </Box>
+      )}
 
       {/* Background refresh indicator — fixed height so the layout never shifts */}
       <Box sx={{ height: 3, mb: 1, borderRadius: 1, overflow: 'hidden' }}>
@@ -637,9 +594,9 @@ export default function MisSitiosPage() {
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {dayRows.map(row => {
-              const cellLogs = logsBySiteDay[`${row.site_id}_${selectedDayIdx}`] || [];
-              const plannerItems = row.plannerByDay[selectedDayIdx] || [];
-              const hasLogs = cellLogs.length > 0;
+              const entries = entriesFor(row, selectedDayIdx);
+              const pending = entries.filter(e => e.state === 'planned').map(e => e.item);
+              const hasLogged = entries.some(e => e.state === 'logged');
 
               return (
                 <Paper
@@ -647,17 +604,13 @@ export default function MisSitiosPage() {
                   elevation={0}
                   sx={{
                     border: '1px solid',
-                    borderColor: hasLogs ? 'divider' : (theme) => alpha(theme.palette.text.disabled, 0.2),
+                    borderColor: 'divider',
                     borderRadius: 2,
                     p: 2,
-                    ...(!hasLogs && {
-                      bgcolor: (theme) => alpha(theme.palette.text.disabled, 0.04),
-                      opacity: 0.7,
-                    }),
                   }}
                 >
                   {/* Card header */}
-                  <Typography variant="body1" fontWeight={600} color={hasLogs ? 'text.primary' : 'text.secondary'}>
+                  <Typography variant="body1" fontWeight={600}>
                     {row.site_name}
                   </Typography>
                   {row.suburb && (
@@ -666,41 +619,37 @@ export default function MisSitiosPage() {
                     </Typography>
                   )}
 
-                  {/* Logged entries */}
-                  {hasLogs && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
-                      {cellLogs.map(log => (
-                        <Box
-                          key={log.id}
-                          sx={{ cursor: 'pointer', p: { xs: 0.5, md: 0 }, '&:hover': { opacity: 0.8 } }}
-                          onClick={() => openEditModal(log, row)}
-                        >
-                          <LogChip log={log} flash={flashIds.has(log.id)} />
-                        </Box>
-                      ))}
-                    </Box>
-                  )}
+                  {/* Same card for planned and registered services: tap a registered one to edit it,
+                      a planned one to register it */}
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 1, mb: hasLogged ? 0 : 1.5 }}>
+                    {entries.map(entry => (
+                      <EntryCard
+                        key={entry.key}
+                        entry={entry}
+                        siteName={row.site_name}
+                        dayName={dayName(selectedDayIdx)}
+                        flash={entry.state === 'logged' && flashIds.has(entry.log.id)}
+                        onClick={() => (entry.state === 'logged'
+                          ? openEditModal(entry.log, row)
+                          : openModal(row, selectedDayIdx, [entry.item]))}
+                      />
+                    ))}
+                  </Box>
 
-                  {/* Planner indicators (only if no logs) */}
-                  {!hasLogs && plannerItems.length > 0 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
-                      {plannerItems.map(item => (
-                        <PlannedIndicator key={item.item_id} item={item} />
-                      ))}
-                    </Box>
+                  {/* Add a log for this site and day — hidden once something is registered */}
+                  {!hasLogged && (
+                    <Button
+                      size={isMobile ? 'medium' : 'small'}
+                      variant="text"
+                      startIcon={<Add />}
+                      fullWidth={isMobile}
+                      onClick={() => openModal(row, selectedDayIdx, pending)}
+                      aria-label={`Agregar log, ${row.site_name}, ${dayName(selectedDayIdx)}`}
+                      sx={{ textTransform: 'none' }}
+                    >
+                      Agregar log
+                    </Button>
                   )}
-
-                  {/* Add log button */}
-                  <Button
-                    size={isMobile ? 'medium' : 'small'}
-                    variant="outlined"
-                    startIcon={<Add />}
-                    fullWidth={isMobile}
-                    onClick={() => openModal(row, selectedDayIdx, plannerItems)}
-                    sx={{ textTransform: 'none' }}
-                  >
-                    Agregar log
-                  </Button>
                 </Paper>
               );
             })}
@@ -719,7 +668,7 @@ export default function MisSitiosPage() {
           </Box>
         )
       ) : (
-        /* ── Week view: original table ── */
+        /* ── Week view: one tile per site and day ── */
         gridRows.length === 0 ? (
           <Box sx={{ textAlign: 'center' }}>
             <EmptyState message="No hay sitios planificados ni logs registrados para esta semana" />
@@ -728,195 +677,159 @@ export default function MisSitiosPage() {
             </Button>
           </Box>
         ) : (
-          <TableContainer component={Paper} elevation={0} sx={{ border: '1px solid', borderColor: 'divider', overflowX: 'auto' }}>
-            <Table size="small" sx={{ minWidth: 900 }}>
-              <TableHead>
+          <TableContainer
+            component={Paper}
+            elevation={0}
+            sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, overflowX: 'auto', px: 0.5, pb: 0.5 }}
+          >
+            <Table
+              size="small"
+              sx={{
+                minWidth: 1440,
+                borderCollapse: 'separate',
+                borderSpacing: '6px',
+                '& td, & th': { borderBottom: 'none' },
+              }}
+            >
+              <TableHead sx={{ bgcolor: 'transparent', '& .MuiTableCell-head': { borderBottom: 'none' } }}>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 700, minWidth: 200, position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 2 }}>
-                    Sitio
+                  <TableCell sx={{ ...stickySx, minWidth: 170, verticalAlign: 'bottom', pb: 1 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700}>Sitio</Typography>
                   </TableCell>
                   {weekDates.map((date, i) => {
                     const isToday = i === todayIndex;
                     return (
-                      <TableCell
-                        key={i}
-                        align="center"
-                        sx={{
-                          fontWeight: 700,
-                          minWidth: 110,
-                          ...(isToday && {
-                            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-                          }),
-                        }}
-                      >
-                        <Typography variant="caption" display="block" fontWeight={700}>
-                          {DAY_LABELS[i]}
-                        </Typography>
-                        <Typography variant="caption" color={isToday ? 'primary.main' : 'text.secondary'} fontWeight={isToday ? 700 : 400}>
-                          {date.toLocaleDateString('es-CL', { day: '2-digit', month: '2-digit' })}
-                        </Typography>
-                        {isToday && (
-                          <Chip
-                            label="HOY"
-                            size="small"
-                            color="primary"
-                            sx={{ height: 16, fontSize: '0.55rem', fontWeight: 700, ml: 0.5, '& .MuiChip-label': { px: 0.5 } }}
-                          />
-                        )}
+                      <TableCell key={i} align="center" sx={{ p: 0, minWidth: 164, verticalAlign: 'bottom' }}>
+                        <Box
+                          sx={{
+                            borderRadius: '8px',
+                            py: 0.75,
+                            ...(isToday && { bgcolor: (t) => alpha(t.palette.primary.main, 0.1) }),
+                          }}
+                        >
+                          <Typography variant="body2" fontWeight={700} sx={{ textTransform: 'uppercase', color: (th) => (isToday ? th.palette.primary[th.palette.mode === 'dark' ? 'light' : 'main'] : th.palette.text.primary) }}>
+                            {DAY_LABELS[i]} {date.getDate()}
+                          </Typography>
+                          {isToday && (
+                            <Typography component="div" sx={{ fontSize: '0.65rem', fontWeight: 700, lineHeight: 1.2, color: (th) => th.palette.primary[th.palette.mode === 'dark' ? 'light' : 'main'] }}>
+                              HOY
+                            </Typography>
+                          )}
+                        </Box>
                       </TableCell>
                     );
                   })}
-                  <TableCell align="center" sx={{ fontWeight: 700, minWidth: 80 }}>
-                    <Typography variant="caption" display="block" fontWeight={700}>Total</Typography>
+                  <TableCell align="center" sx={{ minWidth: 72, verticalAlign: 'bottom', pb: 1 }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700}>Total</Typography>
                   </TableCell>
                 </TableRow>
               </TableHead>
 
               <TableBody>
-                {gridRows.map(row => (
-                  <TableRow key={row.site_id} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                    {/* Site name column (sticky) */}
-                    <TableCell sx={{ verticalAlign: 'top', py: 1.5, position: 'sticky', left: 0, bgcolor: 'background.paper', zIndex: 1 }}>
-                      <Typography variant="body2" fontWeight={600} noWrap>{row.site_name}</Typography>
-                      {row.suburb && (
-                        <Typography variant="caption" color="text.secondary" noWrap display="block">
-                          {row.suburb}
-                        </Typography>
-                      )}
-                    </TableCell>
+                {gridRows.map(row => {
+                  const rowTotal = Array.from({ length: 7 }, (_, d) =>
+                    (logsBySiteDay[`${row.site_id}_${d}`] || []).reduce((s, l) => s + Number(l.display_value || 0), 0),
+                  ).reduce((a, b) => a + b, 0);
 
-                    {/* Day cells */}
-                    {weekDates.map((_, dayIdx) => {
-                      const isToday = dayIdx === todayIndex;
-                      const cellLogs = logsBySiteDay[`${row.site_id}_${dayIdx}`] || [];
-                      const plannerItems = row.plannerByDay[dayIdx] || [];
-                      const hasLogs = cellLogs.length > 0;
-                      const hasPlanner = plannerItems.length > 0;
+                  return (
+                    <TableRow key={row.site_id}>
+                      {/* Site (stays visible while scrolling sideways) */}
+                      <TableCell sx={{ ...stickySx, py: 1 }}>
+                        <Typography variant="body2" fontWeight={700} sx={{ lineHeight: 1.3 }}>{row.site_name}</Typography>
+                        {row.suburb && (
+                          <Typography variant="caption" color="text.secondary" display="block" sx={{ textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                            {row.suburb}
+                          </Typography>
+                        )}
+                      </TableCell>
 
-                      return (
-                        <TableCell
-                          key={dayIdx}
-                          align="center"
-                          onClick={() => openModal(row, dayIdx, plannerItems)}
-                          sx={{
-                            verticalAlign: 'top',
-                            py: 1,
-                            px: 0.75,
-                            minWidth: 110,
-                            cursor: 'pointer',
-                            transition: 'background-color 0.15s',
-                            ...(isToday && {
-                              bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04),
-                            }),
-                            '&:hover': {
-                              bgcolor: (theme) => alpha(theme.palette.primary.main, isToday ? 0.10 : 0.06),
-                            },
-                          }}
-                        >
-                          {/* Logged entries — click to edit/delete */}
-                          {cellLogs.map(log => (
+                      {/* Day tiles */}
+                      {weekDates.map((_, dayIdx) => {
+                        const isToday = dayIdx === todayIndex;
+                        const entries = entriesFor(row, dayIdx);
+                        const pending = entries.filter(e => e.state === 'planned').map(e => e.item);
+                        const day = dayName(dayIdx);
+                        const add = () => openModal(row, dayIdx, pending);
+
+                        return (
+                          <TableCell key={dayIdx} sx={{ p: 0, verticalAlign: 'top', height: '1px' /* lets the tile fill the row */ }}>
                             <Box
-                              key={log.id}
-                              sx={{ mb: 0.5, cursor: 'pointer', '&:hover': { opacity: 0.8 } }}
-                              onClick={(e) => { e.stopPropagation(); openEditModal(log, row); }}
+                              sx={{
+                                height: '100%',
+                                minHeight: 64,
+                                p: 0.5,
+                                borderRadius: '10px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 0.5,
+                                bgcolor: (t) => (isToday
+                                  ? alpha(t.palette.primary.main, 0.05)
+                                  : alpha(t.palette.text.primary, t.palette.mode === 'dark' ? 0.05 : 0.035)),
+                              }}
                             >
-                              <LogChip log={log} flash={flashIds.has(log.id)} />
+                              {/* Empty cell: one big add target. With cards, each card is the action
+                                  (planned -> register, registered -> edit), so there is no separate add button. */}
+                              {entries.length === 0 ? (
+                                <AddInCell siteName={row.site_name} dayName={day} onClick={add} />
+                              ) : (
+                                <>
+                                  {entries.map(entry => (
+                                    <EntryCard
+                                      key={entry.key}
+                                      entry={entry}
+                                      siteName={row.site_name}
+                                      dayName={day}
+                                      flash={entry.state === 'logged' && flashIds.has(entry.log.id)}
+                                      onClick={() => (entry.state === 'logged'
+                                        ? openEditModal(entry.log, row)
+                                        : openModal(row, dayIdx, [entry.item]))}
+                                    />
+                                  ))}
+                                </>
+                              )}
                             </Box>
-                          ))}
+                          </TableCell>
+                        );
+                      })}
 
-                          {/* Planner indicators (only if no matching log for that type) */}
-                          {!hasLogs && hasPlanner && plannerItems.map(item => (
-                            <Box key={item.item_id} sx={{ mb: 0.5 }}>
-                              <PlannedIndicator item={item} />
-                            </Box>
-                          ))}
+                      {/* Row total */}
+                      <TableCell align="center" sx={{ verticalAlign: 'middle' }}>
+                        <Typography variant="body2" fontWeight={700} color={rowTotal > 0 ? 'primary.main' : 'text.disabled'}>
+                          {rowTotal > 0 ? hoursLabel(rowTotal) : '—'}
+                        </Typography>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
 
-                          {/* Empty cell hint */}
-                          {!hasLogs && !hasPlanner && (
-                            <Add
-                              sx={{
-                                fontSize: 16,
-                                color: 'text.disabled',
-                                opacity: 0,
-                                transition: 'opacity 0.15s',
-                                '.MuiTableCell-root:hover &': { opacity: 1 },
-                              }}
-                            />
-                          )}
-
-                          {/* "Add more" hint when there are logs but user might want to add another type */}
-                          {hasLogs && (
-                            <Add
-                              sx={{
-                                fontSize: 14,
-                                color: 'text.disabled',
-                                opacity: 0,
-                                mt: 0.25,
-                                transition: 'opacity 0.15s',
-                                '.MuiTableCell-root:hover &': { opacity: 0.6 },
-                              }}
-                            />
-                          )}
-                        </TableCell>
-                      );
-                    })}
-
-                    {/* Row total */}
-                    {(() => {
-                      const rowTotal = Array.from({ length: 7 }, (_, d) =>
-                        (logsBySiteDay[`${row.site_id}_${d}`] || []).reduce((s, l) => s + Number(l.display_value || 0), 0)
-                      ).reduce((a, b) => a + b, 0);
-                      return (
-                        <TableCell align="center" sx={{ verticalAlign: 'top', py: 1.5 }}>
-                          <Typography variant="body2" fontWeight={700} color={rowTotal > 0 ? 'primary.main' : 'text.disabled'}>
-                            {rowTotal > 0 ? rowTotal.toFixed(2) : '—'}
-                          </Typography>
-                        </TableCell>
-                      );
-                    })()}
-                  </TableRow>
-                ))}
-
-                {/* Week totals row */}
-                {gridRows.length > 0 && (
-                  <TableRow sx={{ bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04) }}>
-                    <TableCell sx={{ py: 1.5, position: 'sticky', left: 0, bgcolor: (theme) => alpha(theme.palette.primary.main, 0.04), zIndex: 1 }}>
-                      <Typography variant="body2" fontWeight={700}>TOTAL</Typography>
-                    </TableCell>
-                    {weekDates.map((_, dayIdx) => {
-                      const dayTotal = gridRows.reduce((sum, row) => {
-                        const dayLogs = logsBySiteDay[`${row.site_id}_${dayIdx}`] || [];
-                        return sum + dayLogs.reduce((s, l) => s + Number(l.display_value || 0), 0);
-                      }, 0);
-                      return (
-                        <TableCell key={dayIdx} align="center" sx={{ py: 1.5 }}>
-                          <Typography variant="body2" fontWeight={700} color={dayTotal > 0 ? 'primary.main' : 'text.disabled'}>
-                            {dayTotal > 0 ? dayTotal.toFixed(2) : '—'}
-                          </Typography>
-                        </TableCell>
-                      );
-                    })}
-                    {/* Grand total */}
-                    {(() => {
-                      const grandTotal = logs.reduce((s, l) => s + Number(l.display_value || 0), 0);
-                      return (
-                        <TableCell align="center" sx={{ py: 1.5 }}>
-                          <Typography variant="body2" fontWeight={800} color="primary.main">
-                            {grandTotal > 0 ? grandTotal.toFixed(2) : '—'}
-                          </Typography>
-                        </TableCell>
-                      );
-                    })()}
-                  </TableRow>
-                )}
+                {/* Week totals */}
+                <TableRow>
+                  <TableCell sx={{ ...stickySx, py: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="body2" fontWeight={700}>Total</Typography>
+                  </TableCell>
+                  {weekDates.map((_, dayIdx) => {
+                    const dayTotal = gridRows.reduce((sum, row) => {
+                      const dayLogs = logsBySiteDay[`${row.site_id}_${dayIdx}`] || [];
+                      return sum + dayLogs.reduce((s, l) => s + Number(l.display_value || 0), 0);
+                    }, 0);
+                    return (
+                      <TableCell key={dayIdx} align="center" sx={{ py: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
+                        <Typography variant="body2" fontWeight={700} color={dayTotal > 0 ? 'primary.main' : 'text.disabled'}>
+                          {dayTotal > 0 ? hoursLabel(dayTotal) : '—'}
+                        </Typography>
+                      </TableCell>
+                    );
+                  })}
+                  <TableCell align="center" sx={{ py: 1.25, borderTop: '1px solid', borderColor: 'divider' }}>
+                    <Typography variant="body2" fontWeight={800} color="primary.main">
+                      {logs.length > 0 ? hoursLabel(logs.reduce((s, l) => s + Number(l.display_value || 0), 0)) : '—'}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
 
                 {/* Add-site row */}
                 <TableRow>
-                  <TableCell
-                    colSpan={9}
-                    align="center"
-                    sx={{ py: 1.5, borderBottom: 0 }}
-                  >
+                  <TableCell colSpan={9} align="center" sx={{ py: 1 }}>
                     <Button
                       size="small"
                       startIcon={<Add />}

@@ -16,8 +16,8 @@ import { getSupplies } from '../../services/supplies.service';
 import { createOrder } from '../../services/orders.service';
 import { getTeams } from '../../services/teams.service';
 import { useAuth } from '../../context/AuthContext';
+import { useLayout } from '../../context/layoutState';
 
-const DRAWER_WIDTH = 260;
 
 /** Roles that must manually choose a team when placing an order. */
 const TEAM_SELECTOR_ROLES = ['admin', 'manager', 'accountant'];
@@ -217,6 +217,7 @@ function CartSummaryDialog({
  * Floating bottom bar provides always-accessible search and cart access.
  */
 export default function OrderCatalogPage() {
+  const { drawerWidth } = useLayout(); // the fixed bottom bar starts where the sidebar ends
   const { user } = useAuth();
   const navigate = useNavigate();
   const needsTeam = TEAM_SELECTOR_ROLES.includes(user?.rol);
@@ -445,7 +446,7 @@ export default function OrderCatalogPage() {
         sx={{
           position: 'fixed',
           bottom: 0,
-          left: { xs: 0, md: `${DRAWER_WIDTH}px` },
+          left: { xs: 0, md: `${drawerWidth}px` },
           right: 0,
           zIndex: (theme) => theme.zIndex.appBar - 1,
           bgcolor: 'background.paper',
